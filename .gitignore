@@ -8,4 +8,5 @@ data/
 runs/
 
 # Trained Model Weights And Exported Models
-*.pt, *.onnx
+*.pt
+*.onnx

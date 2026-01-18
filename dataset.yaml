@@ -1,9 +1,9 @@
 # Dataset configuration file
 
 # Dataset Paths
-path: data/spark-2022-stream-1
-train: train/train
-val: val/val
+path: D:/SpaceObjectDetection-YOLO/data/spark-2022-stream-1
+train: images/train
+val: images/val
 
 # Number Of Classes
 nc: 11

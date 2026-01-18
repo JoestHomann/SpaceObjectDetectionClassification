@@ -1,2 +1,14 @@
+# Python Virtual Environment
+.venv/
+
+# Spark Datasets
 data/
+
+# Training Outputs
 runs/
+
+# Python Bytecode Cache
+__pycache__/
+
+# Trained Model Weights And Exported Models
+*.pt, *.onnx

@@ -3,10 +3,3 @@
 
 # Spark Datasets
 /data/
-
-# Training Outputs
-/runs/
-
-# Trained Model Weights And Exported Models
-*.pt
-*.onnx

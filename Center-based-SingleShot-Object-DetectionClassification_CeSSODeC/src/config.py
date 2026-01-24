@@ -1,0 +1,136 @@
+# config.py
+# Configuration file for Center-based Single Shot Object Detection and Classification (CeSSODeC)
+# 
+# Details:
+#   None
+# 
+# Syntax:  
+# 
+# Inputs:
+#   None
+#
+# Outputs:
+#   None
+#
+# Examples:
+#   None
+#
+# See also:
+#   None
+#
+# Author:                   J. Homann, C. Kern
+# Email:                    st171800@stud.uni-stuttgart.de
+# Created:                  23-Jan-2026 10:00:00
+# References:
+#   None
+#
+# Revision history:
+#   None
+#
+# Implemented in VSCode 1.108.1
+# 2026 in the Applied Machine Learning Course Project
+
+class GridConfig:
+
+    """
+    Configuration class for grid settings in CeSSODeC.
+
+    Attributes:
+    imgsz: input image size in pixels e.g. imgsz = 640 means 640x640 pixels
+    stride_S: feature stride in pixels (How big the object is compared to the image size) 
+              e.g. stride_S = 8 means that the feature map is 1/8th the size of the input image
+    H: grid height (imgsz / stride_S)
+    W: grid width (imgsz / stride_S) (for now H = W)
+    """
+    imgsz: int = 320
+    stride_S: int = 10
+    H: int = imgsz // stride_S
+    W: int = imgsz // stride_S
+    
+
+
+class DataConfig:
+    """
+    Dataset configuration for CeSSODeC.
+    
+    Attributes:
+
+        root: str
+            Dataset root directory path.
+        normalize: str
+            Normalzation mehtod for input images (Resnet, imagenet).
+            First try: Imagenet
+            Possible improvements: Dataset specific normalization
+        num_classes: int
+            Amount of classes in the dataset.  
+    """
+    root: str = ''
+    normalize: str = 'imagenet'
+    num_classes: int = 11       # TODO: Do we need this?? Already defined in class_names.txt?
+
+    
+class ModelConfig:
+    """
+    Model configuration for CeSSODeC.
+
+    Attributes:
+    backbone: str
+        Backbone architecture for feature extraction.
+        First try: resnet18
+        possible improvements: resnet34, resnet50 (hardware heavy)
+    num_classes: int
+        Amount of classes in the model. May differ from dataset num_classes if using different datasets for training and evaluation.
+    feature_stride: int
+        Feature stride for the model (should match DataConfig stride_S).
+    """
+    backbone: str = 'resnet18'
+    num_classes: int = 11  
+    feature_stride: int = 10    # TODO: Remove redundancy?
+
+
+
+class TrainConfig:
+    """
+    Training hyperparameters and configuration/settings for CeSSODeC.
+
+    Attributes:
+        device: "cuda" or "cpu"
+        lr: learning rate of optimizer(e.g. Adam)
+        weight_decay: weight decay for optimizer
+        epochs: number of epochs that the model has to go through for training
+        batch_size: Number of training samples (images) in one forward/backward pass
+        num_workers: Number of DataLoaders, which load/prepare the samples to 
+                     then feed these batches to the model during training
+        activateAMP: Boolean to activate automatic mixed precision training to save memory 
+                     and speed up training (use float16/bfloat32 instead of float32 everytime)
+        ckpt_last_path: Path to save the last checkpoint of the model
+        ckpt_best_path: Path to save the best checkpoint of the model (Usally the same as ckpt_last_path) # TODO: Remove?
+        seed: (Random) seed for reproducibility
+    """
+    device: str = "cuda"
+    lr: float = 1e-3
+    weight_decay: float = 1e-2
+    epochs: int = 50
+    batch_size: int = 32
+    num_workers: int = 4
+    activateAMP: bool = False
+    ckpt_last_path: str = './runs/runX/checkpoints/ckpt_last.pth'   # TODO: Update runX to dynamic run folder
+    ckpt_best_path: str = './runs/runX/checkpoints/ckpt_best.pth'
+    seed: int = 69420
+
+class RunConfig:
+    """
+    Run configuration for CeSSODeC. This class puts all other configuration classes together. 
+        
+    SINGLE SOURCE OF TRUTH! (Donald J. Trump - The holy father of config classes)
+
+    Inputs:
+         data: DataConfig class
+         grid: GridConfig class
+         model: Modelconfig class
+         train: TrainConfig class
+     """
+    data: DataConfig
+    grid: GridConfig
+    model: ModelConfig
+    train: TrainConfig

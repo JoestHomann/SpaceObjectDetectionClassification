@@ -30,6 +30,9 @@
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
 
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
 class GridConfig:
 
     """
@@ -43,12 +46,12 @@ class GridConfig:
     W: grid width (imgsz / stride_S) (for now H = W)
     """
     imgsz: int = 320
-    stride_S: int = 10
+    stride_S: int = 10   # TODO: Rename to featureStride_grid?
     H: int = imgsz // stride_S
     W: int = imgsz // stride_S
     
 
-
+@dataclass(frozen=True)
 class DataConfig:
     """
     Dataset configuration for CeSSODeC.
@@ -64,11 +67,11 @@ class DataConfig:
         num_classes: int
             Amount of classes in the dataset.  
     """
-    root: str = ''
-    normalize: str = 'imagenet'
+    datasetRoot: str = ""
+    normalize: str = "imagenet"
     num_classes: int = 11       # TODO: Do we need this?? Already defined in class_names.txt?
 
-    
+@dataclass(frozen=True)   
 class ModelConfig:
     """
     Model configuration for CeSSODeC.
@@ -83,12 +86,12 @@ class ModelConfig:
     feature_stride: int
         Feature stride for the model (should match DataConfig stride_S).
     """
-    backbone: str = 'resnet18'
+    backbone: str = "resnet18"
     num_classes: int = 11  
-    feature_stride: int = 10    # TODO: Remove redundancy?
+    feature_stride: int = 10    # TODO: Remove redundancy? # TODO: Rename to featureStride_model?
 
 
-
+@dataclass(frozen=True)
 class TrainConfig:
     """
     Training hyperparameters and configuration/settings for CeSSODeC.
@@ -118,6 +121,7 @@ class TrainConfig:
     ckpt_best_path: str = './runs/runX/checkpoints/ckpt_best.pth'
     seed: int = 69420
 
+@dataclass(frozen=True)
 class RunConfig:
     """
     Run configuration for CeSSODeC. This class puts all other configuration classes together. 

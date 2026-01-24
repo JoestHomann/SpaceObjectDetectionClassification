@@ -22,7 +22,7 @@
 #
 # Author:                   J. Homann, C. Kern
 # Email:                    st171800@stud.uni-stuttgart.de
-# Created:                  23-Jan-2026 10:00:00
+# Created:                  23-Jan-2026 13:00:00
 # References:
 #   None
 #
@@ -33,7 +33,7 @@
 # 2026 in the Applied Machine Learning Course Project
 
 
-from sympy import ff
+from sympy import ff                # TODO: brauchen wir das?
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -97,8 +97,8 @@ class CeSSODeCModel(nn.Module):
             #       - Box head: 2 output channels (width and height)
             #       - Class head: num_classes output channels (class probabilities)
             self.center_head = nn.Conv2d(backbone_out_channels, out_channels=1, kernel_size=1, stride=1, padding=0)
-            self.box_head = nn.Conv2d(backbone_out_channels, out_channels=2, kernel_size=1, stride=1, padding=0)
-            self.class_head = nn.Conv2d(backbone_out_channels, model_cfg.num_classes, kernel_size=1, stride=1, padding=0)
+            self.box_head = nn.Conv2d(backbone_out_channels, out_channels=4, kernel_size=1, stride=1, padding=0)
+            self.cls_head = nn.Conv2d(backbone_out_channels, model_cfg.num_classes, kernel_size=1, stride=1, padding=0)
 
             # Activation function
             # Sigmoid-function converts outputs to probabilities between 0 and 1
@@ -119,9 +119,8 @@ class CeSSODeCModel(nn.Module):
         Outputs:
         tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             center_preds shape: (B, 1, H', W') - Center predictions
-            box_preds shape: (B, 2, H', W') - Box dimension predictions
-            class_preds shape: (B, num_classes, H', W') - Class probability predictions
-            All outputs activated with Sigmoid function.
+            box_preds shape: (B, 4, H', W') - Box dimension predictions
+            class_preds shape: (B, num_classes, H', W') - Class logits predictions
         """
         feat = self.backbone(x)  # Extract features using the backbone
 
@@ -131,12 +130,12 @@ class CeSSODeCModel(nn.Module):
         box_logits = self.box_head(feat)  # Box dimension predictions
         box_preds = self.sigmoid(box_logits)  # Apply Sigmoid activation
 
-        class_preds = self.class_head(feat)  # Class probability predictions without activation (we take what we get)
+        cls_preds = self.cls_head(feat)  # Class logits predictions without activation (we take what we get)
 
         if __debug__:
-            self._assert_shapes(x, center_preds, box_preds, class_preds)
+            self._assert_shapes(x, center_preds, box_preds, cls_preds)
 
-        return center_preds, box_preds, class_preds
+        return center_preds, box_preds, cls_preds
 
 
     def _assert_shapes(self, x: torch.Tensor, center_preds: torch.Tensor, box_preds: torch.Tensor, class_preds: torch.Tensor) -> None:
@@ -162,7 +161,7 @@ class CeSSODeCModel(nn.Module):
         if center_preds.shape != (B, 1, H, W):                     #checks for correct shape of center predictions
             raise ValueError(f"Expected center_pred shape (B,1,{H},{W}), got {tuple(center_preds.shape)}")
         
-        if box_preds.shape != (B, 2, H, W):                        #checks for correct shape of box predictions
+        if box_preds.shape != (B, 4, H, W):                        #checks for correct shape of box predictions
             raise ValueError(f"Expected box_pred shape (B,2,{H},{W}), got {tuple(box_preds.shape)}")
         
         C = int(self.model_cfg.num_classes)

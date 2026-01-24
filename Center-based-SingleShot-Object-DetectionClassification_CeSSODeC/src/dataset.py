@@ -99,7 +99,7 @@ class SingleObjectYoloDataset(Dataset):
         self._build_index()         # Creates an internal index of all samples in the dataset
 
         if len(self._index) == 0:
-            raise RuntimeError(f"No samples found for data ={data} in {data_cfg.root}")  # Raise an error if no samples are found for the specified split
+            raise RuntimeError(f"No samples found for data ={data} in {data_cfg.datasetRoot}")  # Raise an error if no samples are found for the specified split
 
     def __len__(self) -> int:
         """ Returns the number of samples in the dataset """
@@ -131,7 +131,7 @@ class SingleObjectYoloDataset(Dataset):
         """
         Builds an internal deterministic index of all samples (image_path, label_path) in the selected dataset split.
         """ 
-        root = Path(self.data_cfg.root)                    # Convert the root path from string to Path object
+        root = Path(self.data_cfg.datasetRoot)                    # Convert the root path from string to Path object
 
         img_dir = root / "images" / self.data             # Construct the image directory path
         label_dir = root / "labels" / self.data           # Construct the label directory path
@@ -145,6 +145,9 @@ class SingleObjectYoloDataset(Dataset):
             label_path = label_dir / (img_path.stem + ".txt") # Construct the corresponding label file path
             if not label_path.is_file():
                 raise RuntimeError(f"Missing label file for image: {img_path}")  # Raise an error if the label file does not exist
+        
+        self._index.append((img_path, label_path))
+
 
 
 

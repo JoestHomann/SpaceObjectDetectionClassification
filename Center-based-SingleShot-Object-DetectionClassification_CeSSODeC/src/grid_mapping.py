@@ -36,8 +36,8 @@ import math
 
 def clamp_to_grid(i: int, j: int, grid: GridConfig) -> tuple[int, int]:
     """
-    Froces floating indices on valid (integer) grid positions.
-    Prevents centerpoints from beeing outside the grid.
+    Forces indices on valid (integer) grid positions.
+    Prevents centerpoints from being outside the grid.
     
     i = row index = y in [0...H-1]
     j = column index = x in [0...W-1]

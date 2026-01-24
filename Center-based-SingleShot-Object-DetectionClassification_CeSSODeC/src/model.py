@@ -33,7 +33,6 @@
 # 2026 in the Applied Machine Learning Course Project
 
 
-from sympy import ff                # TODO: brauchen wir das?
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -106,6 +105,7 @@ class CeSSODeCModel(nn.Module):
             
         else:
             raise ValueError(f"Unsupported backbone: {model_cfg.backbone}")
+        
 
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -167,3 +167,5 @@ class CeSSODeCModel(nn.Module):
         C = int(self.model_cfg.num_classes)
         if class_preds.shape[1:] != (C, H, W):                     #checks for correct number of classes in class predictions
             raise ValueError(f"Expected class_pred shape (B,{C},{H},{W}), got {tuple(class_preds.shape)}")
+        
+        return

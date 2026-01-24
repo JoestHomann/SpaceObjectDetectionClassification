@@ -46,7 +46,7 @@ class GridConfig:
     W: grid width (imgsz / stride_S) (for now H = W)
     """
     imgsz: int = 320
-    stride_S: int = 10   # TODO: Rename to featureStride_grid?
+    stride_S: int = 32 # 32 because of ResNet18   # TODO: Rename to featureStride_grid?
     H: int = imgsz // stride_S
     W: int = imgsz // stride_S
     
@@ -68,7 +68,7 @@ class DataConfig:
             Amount of classes in the dataset.  
     """
     datasetRoot: str = ""
-    normalize: str = "imagenet"
+    normalize: str = "resnet18_imagenet"
     num_classes: int = 11       # TODO: Do we need this?? Already defined in class_names.txt?
 
 @dataclass(frozen=True)   
@@ -88,7 +88,7 @@ class ModelConfig:
     """
     backbone: str = "resnet18"
     num_classes: int = 11  
-    feature_stride: int = 10    # TODO: Remove redundancy? # TODO: Rename to featureStride_model?
+    feature_stride: int = 32    # TODO: Remove redundancy? # TODO: Rename to featureStride_model?
 
 
 @dataclass(frozen=True)
@@ -117,8 +117,8 @@ class TrainConfig:
     batch_size: int = 32
     num_workers: int = 4
     activateAMP: bool = False
-    ckpt_last_path: str = './runs/runX/checkpoints/ckpt_last.pth'   # TODO: Update runX to dynamic run folder
-    ckpt_best_path: str = './runs/runX/checkpoints/ckpt_best.pth'
+    ckpt_last_path: str = './runs/run1/checkpoints/last.pth'   # TODO: Update runX to dynamic run folder
+    ckpt_best_path: str = './runs/run1/checkpoints/best.pth'
     seed: int = 69420
 
 @dataclass(frozen=True)

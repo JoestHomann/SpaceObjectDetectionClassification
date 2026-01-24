@@ -1,11 +1,11 @@
 # train.py
 # Training loops for Center-based Single Shot Object Detection and Classification (CeSSODeC).
-# 
+#
 # Details:
 #   None
-# 
-# Syntax:  
-# 
+#
+# Syntax:
+#
 # Inputs:
 #   None
 #
@@ -29,7 +29,6 @@
 #
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
-
 
 
 # Was macht die train.py?
@@ -68,6 +67,8 @@ from config import RunConfig
 
 # Was macht der Dataloader?
 # Er lädt die Daten in Batches und bereitet sie für das Training vor.
+
+
 def build_loaders(cfg: RunConfig) -> dict[str, DataLoader]:
     """
     Builds PyTorch DataLoaders for training and validation.
@@ -135,18 +136,19 @@ def train_one_epoch(
         optimizer: The optimizer
         loader: DataLoader for training data
         cfg: RunConfig with training settings
-    
+
     Outputs:
         dict with average losses: {"Loss_center", "Loss_box", "Loss_class", "Loss_total"}
     """
     model.train()   # Model in training mode
 
-    device = cfg.train.device #Device from config
-    amp_enabled = cfg.train.activateAMP 
+    device = cfg.train.device  # Device from config
+    amp_enabled = cfg.train.activateAMP
     scaler = GradScaler(enabled=amp_enabled)
 
     # Initialize loss sums and batch counter
-    loss_sums = {"Loss_center": 0.0, "Loss_box": 0.0, "Loss_class": 0.0, "Loss_total": 0.0} 
+    loss_sums = {"Loss_center": 0.0, "Loss_box": 0.0,
+                 "Loss_class": 0.0, "Loss_total": 0.0}
     n_batches = 0
 
     # Iterate over batches
@@ -162,15 +164,16 @@ def train_one_epoch(
         with autocast(enabled=amp_enabled):
             center_pred, box_pred, cls_pred = model(x)
             losses = loss_fn(
-                center_pred=center_pred,
-                box_pred=box_pred,
-                cls_pred=cls_pred,
+                center_preds=center_pred,
+                box_preds=box_pred,
+                class_preds=cls_pred,
                 gridIndices_gt=gridIndices_gt,
                 bbox_gt_norm=bbox_gt_norm,
                 cls_gt=cls_gt,
             )
+
     # Backward pass and optimization step
-        scaler.scale(losses["L"]).backward()
+        scaler.scale(losses["Loss_total"]).backward()
         scaler.step(optimizer)
         scaler.update()
     # Loss accumulation
@@ -185,6 +188,7 @@ def train_one_epoch(
 # VALIDATION
 # ---------------------------------------------------------
 
+
 @torch.no_grad()
 def validate(
     model: torch.nn.Module,
@@ -198,7 +202,7 @@ def validate(
     Metric:
     - classification accuracy
     """
-    model.eval() # Model in evaluation mode
+    model.eval()  # Model in evaluation mode
     device = cfg.train.device
 
     correct = 0
@@ -243,11 +247,11 @@ def fit(cfg: RunConfig) -> None:
     - run epochs
     - save last & best checkpoints
     """
-    torch.manual_seed(cfg.train.seed) # Set seed for reproducibility
- 
-    device = torch.device(cfg.train.device) # Device from config
+    torch.manual_seed(cfg.train.seed)  # Set seed for reproducibility
 
-    loaders = build_loaders(cfg) # Build data loaders
+    device = torch.device(cfg.train.device)  # Device from config
+
+    loaders = build_loaders(cfg)  # Build data loaders
 
     # Initialize model, loss function, optimizer
     model = CeSSODeCModel(cfg.model, cfg.grid).to(device)
@@ -271,10 +275,10 @@ def fit(cfg: RunConfig) -> None:
         if meta is not None:
             start_epoch = meta.get("epoch", 0) + 1
             best_acc = meta.get("best_acc", 0.0)
-    
+
     # Train epochs and validate
     for epoch in range(start_epoch, cfg.train.epochs):
-        #train one epoch
+        # train one epoch
         train_metrics = train_one_epoch(
             model,
             loss_fn,
@@ -318,9 +322,6 @@ def fit(cfg: RunConfig) -> None:
             )
 
 
-
-
-
 # def build_model_loss_optim(cfg: RunConfig) -> Tuple[CenterSingleObjNet, CenterSingleObjLoss, torch.optim.Optimizer]:
 #     """
 #     Build model, loss function, and optimizer.
@@ -345,11 +346,9 @@ def fit(cfg: RunConfig) -> None:
 #     return model, loss_fn, optimizer TODO: Braucht man die Funktion evtl?
 
 
-
 # def _set_seed(seed: int) -> None:
 #     # Make runs more reproducible.
 #     random.seed(seed)
 #     torch.manual_seed(seed)
 #     if torch.cuda.is_available():
 #         torch.cuda.manual_seed_all(seed) TODO: Funktion kann implementiert werden, um Seed besser zu setzen
-

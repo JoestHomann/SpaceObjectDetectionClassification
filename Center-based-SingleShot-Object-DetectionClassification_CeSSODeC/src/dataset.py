@@ -145,8 +145,7 @@ class SingleObjectYoloDataset(Dataset):
             label_path = label_dir / (img_path.stem + ".txt") # Construct the corresponding label file path
             if not label_path.is_file():
                 raise RuntimeError(f"Missing label file for image: {img_path}")  # Raise an error if the label file does not exist
-        
-        self._index.append((img_path, label_path))
+            self._index.append((img_path, label_path))
 
 
 
@@ -164,9 +163,11 @@ class SingleObjectYoloDataset(Dataset):
         """
         img = Image.open(img_path)  # Open the image using PIL Image
 
-        x = self._pil_to_chw_float(img)  # Convert the PIL image to a float32 tensor in CHW format
+        img_resized = img.resize((self.grid_cfg.imgsz, self.grid_cfg.imgsz))  # Resize the image to the desired input size
 
-        if self.data_cfg.normalize == 'imagenet':
+        x = self._pil_to_chw_float(img_resized)  # Convert the PIL image to a float32 tensor in CHW format
+
+        if self.data_cfg.normalize == 'resnet18_imagenet':
             x = self._imagenet_normalize(x)  # Normalize the image tensor using ImageNet mean and std
 
         return x

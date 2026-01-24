@@ -138,10 +138,10 @@ class SingleObjectLoss(nn.Module):
         total loss
         added losses together with box weight
         """
-        total_loss = Loss_center + self.box_weight * Loss_box + Loss_class # total loss with box weight
+        Loss_total = Loss_center + self.box_weight * Loss_box + Loss_class # total loss with box weight
 
         return {
-            'total_loss': total_loss,
+            'Loss_total': Loss_total,
             'Loss_center': Loss_center,
             'Loss_box': Loss_box,
             'Loss_class': Loss_class

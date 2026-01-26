@@ -25,7 +25,8 @@
 #   None
 #
 # Revision history:
-#   None
+#   - Removed initial center loss implementation via positive-only negative 
+#     log likelihood at gt-pixel with a BCEwithLogits implementation (26-Jan-2026, J. Homann)
 #
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
@@ -71,6 +72,7 @@ class SingleObjectLoss(nn.Module):
         self.smooth_l1_loss = nn.SmoothL1Loss(reduction='none')
         self.cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')
 
+
     def forward(
             self,
             center_preds: torch.Tensor, 
@@ -112,8 +114,28 @@ class SingleObjectLoss(nn.Module):
         """
         center point loss
         """
-        center_at_gt = center_preds[b, 0, i, j]  # (B,)
-        Loss_center = (-torch.log(center_at_gt + self.eps)).mean()  # mean over batch
+        # Get batch size, height, and width from center_preds
+        B, _, H, W = center_preds.shape     # Dont need channel dimension for center_preds, need batch size, height and width
+        
+        # Target Heatmap
+        # Outputs 1 at ground truth center locations, 0 elsewhere
+        center_target = torch.zeros((B, 1, H, W),               # Fill matrix/tensor of size (B,1,H,W) with zeros
+                                     device=device,
+                                     dtype=center_preds.dtype) 
+        center_target[b, 0, i, j] = 1.0                         # Set ground truth center locations (i, j) in the matrix to 1 for each batch element b   
+
+        # Positive counter weight to balance out the many negative samples
+        # Makes one positive pixel as important as all negative pixels together
+        positive_counterWeight = torch.tensor([float(H * W - 1)], device=device, dtype=center_preds.dtype) 
+
+        # Center loss calculation using binary cross-entropy with logits ("raw" model output)
+        Loss_center = F.binary_cross_entropy_with_logits(
+            center_preds,
+            center_target,
+            pos_weight= positive_counterWeight,
+            reduction='mean'                                    # Ouput the mean loss over the batch
+        )
+
         
         """
         bounding box size loss

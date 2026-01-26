@@ -27,7 +27,7 @@
 #   None
 #
 # Revision history:
-#   None
+#   - Removed sigmoid activation from center head output to provide raw logits for loss computation (26-Jan-2026, J. Homann)
 #
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
@@ -125,7 +125,7 @@ class CeSSODeCModel(nn.Module):
         feat = self.backbone(x)  # Extract features using the backbone
 
         center_logits = self.center_head(feat)  # Center predictions
-        center_preds = self.sigmoid(center_logits)  # Apply Sigmoid activation
+        center_preds = center_logits  # Retain "raw" logits for center predictions (removed sigmoid)
         
         box_logits = self.box_head(feat)  # Box dimension predictions
         box_preds = self.sigmoid(box_logits)  # Apply Sigmoid activation
@@ -162,7 +162,7 @@ class CeSSODeCModel(nn.Module):
             raise ValueError(f"Expected center_pred shape (B,1,{H},{W}), got {tuple(center_preds.shape)}")
         
         if box_preds.shape != (B, 4, H, W):                        #checks for correct shape of box predictions
-            raise ValueError(f"Expected box_pred shape (B,2,{H},{W}), got {tuple(box_preds.shape)}")
+            raise ValueError(f"Expected box_pred shape (B,4,{H},{W}), got {tuple(box_preds.shape)}")
         
         C = int(self.model_cfg.num_classes)
         if class_preds.shape[1:] != (C, H, W):                     #checks for correct number of classes in class predictions

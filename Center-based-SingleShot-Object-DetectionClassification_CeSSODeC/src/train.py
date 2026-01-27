@@ -153,7 +153,12 @@ def train_one_epoch(
     # Initialize loss sums and batch counter
     loss_sums = {"Loss_center": 0.0, "Loss_box": 0.0,
                  "Loss_class": 0.0, "Loss_total": 0.0}
-    n_batches = 0
+    
+    # Initialize variables for accuracy calculation (used for logging)
+    n_batches = 0       # Number of batches processed
+    correct = 0         # Number of correct predictions
+    total = 0           # Total number of samples
+    center_correct = 0  # Number of correct center predictions
 
     # Iterate over batches
     for x, gridIndices_gt, bbox_gt_norm, cls_gt in loader:
@@ -176,6 +181,25 @@ def train_one_epoch(
                 cls_gt=cls_gt,
             )
 
+        # Accuracy calculation (for logging)
+        with torch.no_grad():
+            batch_size = x.shape[0]                                                     # Current batch size
+
+            center_flat = center_pred[:, 0].reshape(batch_size, -1)                     # Flatten center predictions
+            pred_center_cell_index = torch.argmax(center_flat, dim = 1)                 # Predicted center cell index
+
+            W = cfg.grid.W
+            i_hat = pred_center_cell_index // W                                         # Predicted center cell row index
+            j_hat = pred_center_cell_index % W                                          # Predicted center cell column index
+            center_correct += ((i_hat == gridIndices_gt[:, 0]) & (j_hat == gridIndices_gt[:, 1])).sum().item()  # Center hit count
+
+            cls_logits = cls_pred[torch.arange(batch_size, device=cls_pred.device), :, i_hat, j_hat]    # Class logits at predicted center
+            cls_hat = torch.argmax(cls_logits, dim = 1)                                 # Predicted class at center
+
+            correct += (cls_hat == cls_gt).sum().item()                                 # Correct class predictions
+            total += batch_size                                                         # Total samples
+
+
     # Backward pass and optimization step
         scaler.scale(losses["Loss_total"]).backward()
         scaler.step(optimizer)
@@ -186,7 +210,11 @@ def train_one_epoch(
 
         n_batches += 1
 
-    return {k: v / n_batches for k, v in loss_sums.items()}
+    out = {k: v / n_batches for k, v in loss_sums.items()}
+    out["accuracy"] = correct / max(total, 1)
+    out["center_acc"] = center_correct / max(total, 1)
+    return out
+
 
 # ---------------------------------------------------------
 # VALIDATION
@@ -388,6 +416,9 @@ def fit(cfg: RunConfig) -> None:
         writer.add_scalar("train/Loss_center", train_metrics["Loss_center"], epoch)
         writer.add_scalar("train/Loss_box", train_metrics["Loss_box"], epoch)
         writer.add_scalar("train/Loss_class", train_metrics["Loss_class"], epoch)
+        # Accuracies
+        writer.add_scalar("train/accuracy", train_metrics["accuracy"], epoch)
+        writer.add_scalar("train/center_acc", train_metrics["center_acc"], epoch)
         
         # Val metrics
         # Losses

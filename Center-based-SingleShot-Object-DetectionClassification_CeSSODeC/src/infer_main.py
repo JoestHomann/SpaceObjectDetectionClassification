@@ -42,7 +42,7 @@ from pathlib import Path
 
 import torch
 
-from config import DataConfig, GridConfig, ModelConfig, RunConfig, TrainConfig
+from config import DataConfig, GridConfig, ModelConfig, RunConfig, TrainConfig, LossConfig
 from infer import load_model_for_inference, preprocess_image, decode_single
 
 
@@ -115,10 +115,13 @@ def build_config_inf(ParserArguments: argparse.Namespace) -> RunConfig:
     # Overwrite the instances TrainConfig values with the parsed arguments (if parsed) and store them in train
     if ParserArguments.device is not None:
         device = ParserArguments.device
-        train = TrainConfig(device=device)  
+        train = TrainConfig(device=device) 
+
+    # Initialize instance/object of class LossConfig
+    loss = LossConfig() 
 
     # Return the combined RunConfig
-    return RunConfig(data=data, grid=grid, model=model, train=train)
+    return RunConfig(data=data, grid=grid, model=model, train=train, loss=loss)
 
 
 def main() -> None:

@@ -160,6 +160,12 @@ def train_one_epoch(
     total = 0           # Total number of samples
     center_correct = 0  # Number of correct center predictions
 
+    # Initilaize variables for acc tracking
+    p_gt_sum = 0.0
+    p_max_sum = 0.0
+    p_bg_sum = 0.0
+    n_samples = 0
+
     # Iterate over batches
     for x, gridIndices_gt, bbox_gt_norm, cls_gt in loader:
         x = x.to(device)
@@ -201,6 +207,22 @@ def train_one_epoch(
             correct += (cls_hat == cls_gt).sum().item()                                 # Correct class predictions
             total += batch_size                                                         # Total samples
 
+        with torch.no_grad():
+            B = x.shape[0]
+            probs = torch.sigmoid(center_pred[:, 0])  # Convert logits to probabilities
+
+            i_gt = gridIndices_gt[:, 0]
+            j_gt = gridIndices_gt[:, 1]
+            ar = torch.arange(B, device=device)
+
+            p_gt = probs[ar, i_gt, j_gt]  # Probabilities at ground truth centers
+            p_max = probs.view(B, -1).max(dim=1).values  # Max probabilities in each sample
+            p_bg = probs.mean(dim=(1, 2))  # Mean probabilities (background)
+
+            p_gt_sum += p_gt.sum().item()
+            p_max_sum += p_max.sum().item()
+            p_bg_sum += p_bg.sum().item()
+            n_samples += B
 
     # Backward pass and optimization step
         scaler.scale(losses["Loss_total"]).backward()
@@ -215,6 +237,10 @@ def train_one_epoch(
     out = {k: v / n_batches for k, v in loss_sums.items()}
     out["accuracy"] = correct / max(total, 1)
     out["center_acc"] = center_correct / max(total, 1)
+
+    out["p_gt_avg"] = p_gt_sum / max(n_samples, 1)
+    out["p_max_avg"] = p_max_sum / max(n_samples, 1)
+    out["p_bg_avg"] = p_bg_sum / max(n_samples, 1)
     return out
 
 

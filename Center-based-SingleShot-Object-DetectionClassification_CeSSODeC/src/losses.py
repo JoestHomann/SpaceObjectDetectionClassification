@@ -176,12 +176,17 @@ class SingleObjectLoss(nn.Module):
         positive_counterWeight = torch.tensor([float((H * W)/k)], device=device, dtype=center_preds.dtype) 
 
         # Center loss calculation using binary cross-entropy with logits ("raw" model output)
-        Loss_center = F.binary_cross_entropy_with_logits(
+        Loss_center_map = F.binary_cross_entropy_with_logits(
             center_preds,
             center_target,
             pos_weight= positive_counterWeight,
-            reduction='mean'                                    # Ouput the mean loss over the batch
+            reduction='none'                                    # Ouput the mean loss over the batch
         )
+
+        alpha = 1.0  # Weighting factor for positive samples (TODO: Make this a tuneable hyperparameter)
+        beta = 0.05  # Weighting factor for negative samples (TODO: Make this a tuneable hyperparameter)
+        weight = alpha * center_target + beta * (1.0 - center_target)       # Weight map for balancing positive and negative samples
+        Loss_center = (Loss_center_map * weight).sum() / (weight.sum()+1e-6)  # Weighted center loss
 
         
         """

@@ -43,7 +43,7 @@ import torch
 
 LR_GRID = [1e-4, 3e-4]          # Learning rate
 WD_GRID = [1e-5, 1e-4]          # Weight decay
-SIGMA_GRID = [1.0, 2.0, 3.0]    # Gaussian heatmap standard deviation
+SIGMA_GRID = [0.5, 1.5, 2.5]    # Gaussian heatmap standard deviation
 K_GRID = [10.0, 25.0, 40.0]      # Positive sample weight for BCE loss
 
 EPOCHS = 15   # short runs for HPO

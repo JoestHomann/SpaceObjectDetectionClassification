@@ -27,6 +27,7 @@
 # Revision history:
 #   - Removed initial center loss implementation via positive-only negative 
 #     log likelihood at gt-pixel with a BCEwithLogits implementation (26-Jan-2026, J. Homann)
+#   - Rewrote SingleObjectLoss to sample predicted heatmap at gt centerpoint location (28-Jan-2026, J. Homann, C. Kern)
 #
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project

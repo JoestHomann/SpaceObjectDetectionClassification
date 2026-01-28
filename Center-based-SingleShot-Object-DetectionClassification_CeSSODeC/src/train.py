@@ -179,6 +179,8 @@ def train_one_epoch(
                 gridIndices_gt=gridIndices_gt,
                 bbox_gt_norm=bbox_gt_norm,
                 cls_gt=cls_gt,
+                gaussHM_sigma=cfg.loss.gaussHm_sigma,
+                BCE_scale=cfg.loss.BCE_scale,
             )
 
         # Accuracy calculation (for logging)

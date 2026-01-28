@@ -25,13 +25,13 @@
 #   None
 #
 # Revision history:
-#   None
+#   - Added loss parse arguments for hyperparameter optimization (28-Jan-2026, J. Homann, C. Kern)
 #
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
 
 import argparse
-from config import DataConfig, GridConfig, ModelConfig, RunConfig, TrainConfig
+from config import DataConfig, GridConfig, ModelConfig, RunConfig, TrainConfig, LossConfig
 from train import fit
 
 
@@ -72,6 +72,10 @@ def parse_args_tr() -> argparse.Namespace:
     parser.add_argument("--stride_S", type=int, required=False, default=None, help="Change feature stride (overrides GridConfig.stride_S)")
     parser.add_argument("--normalize", type=str, required=False, default=None, help="Normalization scheme (overrides DataConfig.normalize)")
 
+    # HPO settings can be added here as needed
+    parser.add_argument("--gaussHm_sigma", type=float, default=None, help="Change Gaussian heatmap sigma (overrides LossConfig.gaussHm_sigma)")
+    parser.add_argument("--BCE_scale", type=float, default=None, help="Change BCE loss scale (overrides LossConfig.BCE_scale)")
+
     return parser.parse_args()
 
 def build_config_tr(ParserArguments: argparse.Namespace) -> RunConfig:
@@ -109,6 +113,18 @@ def build_config_tr(ParserArguments: argparse.Namespace) -> RunConfig:
     # Initialize instance/object of class TrainConfig
     train = TrainConfig()
 
+    # Initialize instance/object of class LossConfig
+    loss = LossConfig()
+    
+    # Overwrite the instances LossConfig values with the parsed arguments (if parsed) and store them in loss
+    if ParserArguments.gaussHm_sigma is not None or ParserArguments.BCE_scale is not None:
+        loss = LossConfig(
+            gaussHm_sigma=ParserArguments.gaussHm_sigma 
+                if ParserArguments.gaussHm_sigma is not None else loss.gaussHm_sigma,
+            BCE_scale=ParserArguments.BCE_scale 
+                if ParserArguments.BCE_scale is not None else loss.BCE_scale,
+        )
+
     # Overwrite the instances TrainConfig values with the parsed arguments (if parsed) and store them in train
     if ParserArguments.epochs is not None:
         epochs = ParserArguments.epochs
@@ -143,7 +159,7 @@ def build_config_tr(ParserArguments: argparse.Namespace) -> RunConfig:
         ckpt_best_path=ParserArguments.checkpointPath_best if ParserArguments.checkpointPath_best is not None else train.ckpt_best_path,
     )
 
-    return RunConfig(data=data, grid=grid, model=model, train=train)  # Combine all configurations into RunConfig instance/object and return it
+    return RunConfig(data=data, grid=grid, model=model, train=train, loss=loss)  # Combine all configurations into RunConfig instance/object and return it
 
 
 # Main script execution point

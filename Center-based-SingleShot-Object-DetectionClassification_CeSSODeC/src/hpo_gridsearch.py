@@ -95,7 +95,7 @@ for lr, weight_decay, sigma, k in itertools.product(
 
     # Store HPO results in list
     hpo_results.append({
-        "trial": hpo_run_name,
+        "name": hpo_run_name,
         "lr": lr,
         "weight_decay": weight_decay,
         "gaussHm_sigma": sigma,

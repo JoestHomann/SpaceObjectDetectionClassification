@@ -25,7 +25,7 @@
 #   None
 #
 # Revision history:
-#   None
+#   - Added LossConfig class for loss-related hyperparameters (28-Jan-2026, J. Homann, C. Kern)
 #
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
@@ -50,6 +50,19 @@ class GridConfig:
     H: int = imgsz // stride_S
     W: int = imgsz // stride_S
     
+@dataclass(frozen=True)
+class LossConfig:
+    """
+    Loss configuration for CeSSODeC.
+    
+    Attributes:
+        gaussHm_sigma: float
+            Standard deviation for Gaussian heatmap generation.
+        BCE_scale: float
+            Scaling factor for Binary Cross Entropy loss component.
+    """
+    gaussHm_sigma: float = 2.0
+    BCE_scale: float = 10.0
 
 @dataclass(frozen=True)
 class DataConfig:
@@ -133,8 +146,10 @@ class RunConfig:
          grid: GridConfig class
          model: Modelconfig class
          train: TrainConfig class
+         loss: LossConfig class
      """
     data: DataConfig
     grid: GridConfig
     model: ModelConfig
     train: TrainConfig
+    loss: LossConfig

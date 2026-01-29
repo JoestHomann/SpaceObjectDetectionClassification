@@ -133,6 +133,7 @@ class TrainConfig:
     ckpt_last_path: str = './runs/run1/checkpoints/last.pth'   # TODO: Update runX to dynamic run folder
     ckpt_best_path: str = './runs/run1/checkpoints/best.pth'
     seed: int = 69420
+    run_name: str = "default"
 
 @dataclass(frozen=True)
 class RunConfig:

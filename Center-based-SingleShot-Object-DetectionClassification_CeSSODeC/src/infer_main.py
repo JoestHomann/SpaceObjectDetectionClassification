@@ -123,7 +123,7 @@ def build_config_inf(ParserArguments: argparse.Namespace) -> RunConfig:
     loss = LossConfig() 
 
     # Return the combined RunConfig
-    return RunConfig(data=data, grid=grid, model=model, train=train, loss=None)  # LossConfig not needed for inference
+    return RunConfig(data=data, grid=grid, model=model, train=train, loss=loss)  # LossConfig not needed for inference
 
 
 

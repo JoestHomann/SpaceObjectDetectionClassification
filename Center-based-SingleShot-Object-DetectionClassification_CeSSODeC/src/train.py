@@ -53,7 +53,8 @@ from typing import Any, Dict
 # Torch imports
 import torch
 from torch.utils.data import DataLoader
-from torch.amp import autocast, GradScaler
+from torch.amp.autocast_mode import autocast
+from torch.amp.grad_scaler import GradScaler
 
 # Project imports
 from config import RunConfig
@@ -67,6 +68,7 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import matplotlib.pyplot as plt
 import visualizationHelpers as vh
+from datetime import datetime
 
 
 # ---------------------------------------------------------
@@ -395,7 +397,11 @@ def fit(cfg: RunConfig) -> None:
     - save last & best checkpoints
     """
     # TensorBoard Writer
-    writer = SummaryWriter(log_dir="runs/tensorboard") # TODO: Make dynamic with timestamp or so
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M")
+    
+    tb_dir = Path("runs/tensorboard") / f"{cfg.train.run_name}_{timestamp}"
+    tb_dir.mkdir(parents=True, exist_ok=True)
+    writer = SummaryWriter(log_dir=str(tb_dir)) # TODO: Make dynamic with timestamp or so
 
 
     torch.manual_seed(cfg.train.seed)  # Set seed for reproducibility
@@ -474,9 +480,9 @@ def fit(cfg: RunConfig) -> None:
         writer.add_scalar("train/center_acc", train_metrics["center_acc"], epoch)
 
         # Average probabilities
-        writer.add_scalar("train/p_gt_avg", train_metrics["p_gt_avg"], epoch)
-        writer.add_scalar("train/p_max_avg", train_metrics["p_max_avg"], epoch)
-        writer.add_scalar("train/p_bg_avg", train_metrics["p_bg_avg"], epoch)
+        writer.add_scalar("train/center_prob_at_gt_avg", train_metrics["center_prob_at_gt_avg"], epoch)
+        writer.add_scalar("train/center_prob_max_avg", train_metrics["center_prob_max_avg"], epoch)
+        writer.add_scalar("train/center_prob_background_avg", train_metrics["center_prob_background_avg"], epoch)
         
         # Val metrics
         # Losses
@@ -490,9 +496,9 @@ def fit(cfg: RunConfig) -> None:
         writer.flush() # Ensure data is written to disk
 
         #Average probabilities on val set
-        writer.add_scalar("val/p_gt_avg", val_metrics["p_gt_avg"], epoch)
-        writer.add_scalar("val/p_max_avg", val_metrics["p_max_avg"], epoch)
-        writer.add_scalar("val/p_bg_avg", val_metrics["p_bg_avg"], epoch)
+        writer.add_scalar("val/center_prob_at_gt_avg", val_metrics["center_prob_at_gt_avg"], epoch)
+        writer.add_scalar("val/center_prob_max_avg", val_metrics["center_prob_max_avg"], epoch)
+        writer.add_scalar("val/center_prob_background_avg", val_metrics["center_prob_background_avg"], epoch)
 
         # Confusion Matrix
         class_names = getattr(cfg.model, "class_names", None) # List of class names, if empty read from config

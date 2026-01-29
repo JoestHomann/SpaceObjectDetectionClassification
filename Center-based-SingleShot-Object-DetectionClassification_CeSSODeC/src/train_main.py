@@ -75,6 +75,7 @@ def parse_args_tr() -> argparse.Namespace:
     # HPO settings can be added here as needed
     parser.add_argument("--gaussHm_sigma", type=float, default=None, help="Change Gaussian heatmap sigma (overrides LossConfig.gaussHm_sigma)")
     parser.add_argument("--BCE_scale", type=float, default=None, help="Change BCE loss scale (overrides LossConfig.BCE_scale)")
+    parser.add_argument("--run_name", type=str, default="default", help = "Name of the current run for logging purposes")
 
     return parser.parse_args()
 
@@ -111,7 +112,7 @@ def build_config_tr(ParserArguments: argparse.Namespace) -> RunConfig:
     model = ModelConfig()
 
     # Initialize instance/object of class TrainConfig
-    train = TrainConfig()
+    train = TrainConfig(run_name=ParserArguments.run_name if ParserArguments.run_name is not None else "default")
 
     # Initialize instance/object of class LossConfig
     loss = LossConfig()

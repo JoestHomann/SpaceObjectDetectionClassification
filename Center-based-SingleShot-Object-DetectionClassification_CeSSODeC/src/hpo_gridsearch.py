@@ -86,6 +86,7 @@ for lr, weight_decay, sigma, k in itertools.product(
         "--BCE_scale", str(k),
         "--checkpointPath_last", str(last_checkpoint),
         "--checkpointPath_best", str(best_checkpoint),
+        "--run_name", hpo_run_name,
     ]
     # Print HPO run details and execute the training command as a subprocess
     print(f"[{hpo_run_name}] lr={lr} weight_decay={weight_decay} sigma={sigma} k={k}")

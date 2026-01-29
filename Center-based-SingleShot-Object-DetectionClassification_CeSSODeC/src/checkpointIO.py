@@ -92,7 +92,7 @@ def load_checkpoint(path: Union[str, Path], model: nn.Module, optimizer: Optiona
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
 
     # Load the checkpoint data
-    checkpointData = torch.load(str(checkpoint_path), map_location=map_location)
+    checkpointData = torch.load(str(checkpoint_path), map_location=map_location, weights_only=False)    # weights_only=False as we want to load meta data as well
 
     # Validate checkpoint data format
     if not isinstance(checkpointData, dict):

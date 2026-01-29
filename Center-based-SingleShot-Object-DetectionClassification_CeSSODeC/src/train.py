@@ -53,7 +53,7 @@ from typing import Any, Dict
 # Torch imports
 import torch
 from torch.utils.data import DataLoader
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 
 # Project imports
 from config import RunConfig
@@ -75,7 +75,7 @@ import visualizationHelpers as vh
 
 def build_loaders(cfg: RunConfig) -> dict[str, DataLoader]:
     """
-    Builds PyTorch DataLoaders for training and validation.
+    Build training and validation dataloaders.
 
     Returns:
         dict with keys:
@@ -148,7 +148,7 @@ def train_one_epoch(
 
     device = cfg.train.device  # Device from config
     amp_enabled = cfg.train.activateAMP
-    scaler = GradScaler(enabled=amp_enabled)
+    scaler = GradScaler(device=device, enabled=amp_enabled)
 
     # Initialize loss sums and batch counter
     loss_sums = {"Loss_center": 0.0, "Loss_box": 0.0,
@@ -175,8 +175,8 @@ def train_one_epoch(
 
         optimizer.zero_grad(set_to_none=True)
 
-        # Forward pass
-        with autocast(enabled=amp_enabled):
+        # Forward pass with AMP
+        with autocast(device_type=device, enabled=amp_enabled):
             center_pred, box_pred, cls_pred = model(x)
             losses = loss_fn(
                 center_preds=center_pred,
@@ -248,7 +248,7 @@ def train_one_epoch(
 # VALIDATION
 # ---------------------------------------------------------
 
-@torch.no_grad()
+@torch.no_grad()        # Disable gradient computation for validation
 def validate(
     model: torch.nn.Module,
     loss_fn: torch.nn.Module,
@@ -321,6 +321,8 @@ def validate(
             gaussHm_sigma=cfg.loss.gaussHm_sigma,
             BCE_scale=cfg.loss.BCE_scale,
         )
+
+        # Accumulate losses 
         for k in loss_sums:
             loss_sums[k] += float(losses[k].item()) * x.shape[0]  # Sum weighted by batch size
         total_samples += x.shape[0]

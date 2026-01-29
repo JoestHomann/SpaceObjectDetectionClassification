@@ -7,9 +7,13 @@
 # Training outputs
 runs/
 
+# Infer:runs outpus
+infer_runs/
+
 # Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
 *.pyc
+
 

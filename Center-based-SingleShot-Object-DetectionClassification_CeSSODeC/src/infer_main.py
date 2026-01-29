@@ -44,9 +44,10 @@ import torch
 
 from config import DataConfig, GridConfig, ModelConfig, RunConfig, TrainConfig
 from infer import load_model_for_inference, preprocess_image, decode_single
+
 from visualizationHelpers import visualize_single_inference
-
-
+from pathlib import Path
+from infer import run_inference, InferConfig
 
 def parse_args_inf() -> argparse.Namespace:
 
@@ -139,6 +140,20 @@ def main() -> None:
 
     img_path = Path(parsedArguments.imagePath)
 
+    if img_path.is_file():
+        image_paths = [str(img_path)]
+    elif img_path.is_dir():
+        image_paths = sorted([
+            str(p) for p in img_path.iterdir()
+            if p.suffix.lower() in [".jpg", ".png", ".jpeg"]
+        ])
+        if len(image_paths) == 0:
+            raise RuntimeError(f"No images found in directory: {img_path}")
+    else:
+        raise FileNotFoundError(f"Invalid imagePath: {img_path}")
+
+    img_path = Path(parsedArguments.imagePath)
+
 
     device = torch.device(config_inf.train.device) # Initialize device
 
@@ -150,29 +165,46 @@ def main() -> None:
     device=config_inf.train.device
 )
   
-    # Preprocess the input image and move to device
-    x = preprocess_image(
-        img_path=parsedArguments.imagePath,
-        imgsz=config_inf.grid.imgsz,
-        normalize=config_inf.data.normalize
-    ).to(device)
-
-    with torch.no_grad():
-        center_preds, box_preds, class_preds = model(x)  # Modell ausführen
-
-        pred = decode_single(center_preds, box_preds, class_preds)  # Model-Ausgaben decodieren
-
-
-    print(pred) # Print the prediction results
-
-    visualize_single_inference(
-        img_path=parsedArguments.imagePath,
-        pred=pred,
-        stride_S=config_inf.grid.stride_S,
-        imgsz=config_inf.grid.imgsz,
-        save_path="CESSODEC_runs\inference_result.png"
-    )
     
+
+    infer_cfg = InferConfig(
+        device=config_inf.train.device,
+        normalize=config_inf.data.normalize
+    )
+
+    results = run_inference(
+        ckpt_path=parsedArguments.checkpointPath,
+        inputs=image_paths,
+        model_cfg=config_inf.model,
+        grid_cfg=config_inf.grid,
+        infer_cfg=infer_cfg,
+    )
+
+
+    # visualize_single_inference(
+    #     img_path=parsedArguments.imagePath,
+    #     pred=pred,
+    #     stride_S=config_inf.grid.stride_S,
+    #     imgsz=config_inf.grid.imgsz,
+    #     save_path="CESSODEC_runs\inference_result_single.png"
+    # )
+
+    output_dir = Path("CESSODEC_runs") / "Images_predict"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for res in results:
+        img_name = Path(res["input_path"]).name
+        save_path = output_dir / f"inference_result_{img_name}"
+
+        visualize_single_inference(
+            img_path=res["input_path"],
+            pred=res,
+            stride_S=config_inf.grid.stride_S,
+            imgsz=config_inf.grid.imgsz,
+            save_path=str(save_path)
+        )   
+
+
 
 
 if __name__ == "__main__":

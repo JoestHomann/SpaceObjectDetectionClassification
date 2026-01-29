@@ -117,7 +117,10 @@ class SingleObjectLoss(nn.Module):
             class_preds: torch.Tensor, 
             gridIndices_gt: torch.Tensor, 
             bbox_gt_norm: torch.Tensor, 
-            cls_gt: torch.Tensor) -> dict[str, torch.Tensor]:
+            cls_gt: torch.Tensor,
+            gaussHm_sigma: float = 2.0,
+            BCE_scale: float = 1.0
+            ) -> dict[str, torch.Tensor]:
         
         """
         Normalizes Batch size shapes (i.e. only one sample in batch) to avoid shape errors.
@@ -161,7 +164,7 @@ class SingleObjectLoss(nn.Module):
                                      dtype=center_preds.dtype) 
         center_target = torch.zeros((B, 1, H, W), device = device, dtype=center_preds.dtype)        # Initialize target heatmap with zeros
 
-        standardDeviation = 2.0  # Standard deviation for Gaussian (TODO: Make this a tuneable hyperparameter)
+        standardDeviation = float(gaussHm_sigma)  # Standard deviation for Gaussian heatmap
         # Create Gaussian heatmaps around ground truth center locations
         for batch_index in range(B):
             gaussian_heatmap(center_target[batch_index, 0],
@@ -172,16 +175,21 @@ class SingleObjectLoss(nn.Module):
 
         # Positive counter weight to balance out the many negative samples
         # Makes the ground truth pixel (where object center is) as important as all not-gt pixels together
-        k = 10.0  # Scaling factor to reduce the weight of positive samples to increase stability (TODO: Make this a tuneable hyperparameter)
+        k = float(BCE_scale)  # Scaling factor to reduce the weight of positive samples to increase stability (TODO: Make this a tuneable hyperparameter)
         positive_counterWeight = torch.tensor([float((H * W)/k)], device=device, dtype=center_preds.dtype) 
 
         # Center loss calculation using binary cross-entropy with logits ("raw" model output)
-        Loss_center = F.binary_cross_entropy_with_logits(
+        Loss_center_map = F.binary_cross_entropy_with_logits(
             center_preds,
             center_target,
             pos_weight= positive_counterWeight,
-            reduction='mean'                                    # Ouput the mean loss over the batch
+            reduction='none'                                    # Ouput the mean loss over the batch
         )
+
+        alpha = 1.0  # Weighting factor for positive samples (TODO: Make this a tuneable hyperparameter)
+        beta = 0.05  # Weighting factor for negative samples (TODO: Make this a tuneable hyperparameter)
+        weight = alpha * center_target + beta * (1.0 - center_target)       # Weight map for balancing positive and negative samples
+        Loss_center = (Loss_center_map * weight).sum() / (weight.sum()+1e-6)  # Weighted center loss
 
         
         """

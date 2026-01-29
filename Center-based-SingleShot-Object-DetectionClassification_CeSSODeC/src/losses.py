@@ -117,7 +117,10 @@ class SingleObjectLoss(nn.Module):
             class_preds: torch.Tensor, 
             gridIndices_gt: torch.Tensor, 
             bbox_gt_norm: torch.Tensor, 
-            cls_gt: torch.Tensor) -> dict[str, torch.Tensor]:
+            cls_gt: torch.Tensor,
+            gaussHm_sigma: float = 2.0,
+            BCE_scale: float = 1.0
+            ) -> dict[str, torch.Tensor]:
         
         """
         Normalizes Batch size shapes (i.e. only one sample in batch) to avoid shape errors.
@@ -161,7 +164,7 @@ class SingleObjectLoss(nn.Module):
                                      dtype=center_preds.dtype) 
         center_target = torch.zeros((B, 1, H, W), device = device, dtype=center_preds.dtype)        # Initialize target heatmap with zeros
 
-        standardDeviation = 2.0  # Standard deviation for Gaussian (TODO: Make this a tuneable hyperparameter)
+        standardDeviation = float(gaussHm_sigma)  # Standard deviation for Gaussian heatmap
         # Create Gaussian heatmaps around ground truth center locations
         for batch_index in range(B):
             gaussian_heatmap(center_target[batch_index, 0],
@@ -172,7 +175,7 @@ class SingleObjectLoss(nn.Module):
 
         # Positive counter weight to balance out the many negative samples
         # Makes the ground truth pixel (where object center is) as important as all not-gt pixels together
-        k = 10.0  # Scaling factor to reduce the weight of positive samples to increase stability (TODO: Make this a tuneable hyperparameter)
+        k = float(BCE_scale)  # Scaling factor to reduce the weight of positive samples to increase stability (TODO: Make this a tuneable hyperparameter)
         positive_counterWeight = torch.tensor([float((H * W)/k)], device=device, dtype=center_preds.dtype) 
 
         # Center loss calculation using binary cross-entropy with logits ("raw" model output)

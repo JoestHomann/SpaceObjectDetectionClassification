@@ -103,10 +103,11 @@ class SingleObjectLoss(nn.Module):
         - total_loss: Combined loss from centerpoint, bounding box size, and classification losses
     """
     
-    def __init__(self, eps=1e-6, box_weight: float = 5.0) -> None:
+    def __init__(self, eps=1e-6, box_weight: float = 5.0, center_weight: float = 3.0) -> None:
         super(SingleObjectLoss, self).__init__()
         self.eps = eps
         self.box_weight = box_weight                                    # box weight to balance the losses to more exact boxes (higher value = more exact boxes) TODO: tune
+        self.center_weight = center_weight                              # center weight to balance the losses (higher value = more exact centers) TODO: tune
         self.smooth_l1_loss = nn.SmoothL1Loss(reduction='none')
         self.cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')
 
@@ -213,7 +214,7 @@ class SingleObjectLoss(nn.Module):
         total loss
         added losses together with box weight
         """
-        Loss_total = Loss_center + self.box_weight * Loss_box + Loss_class # total loss with box weight
+        Loss_total = self.center_weight * Loss_center + self.box_weight * Loss_box + Loss_class # total loss with box weight
 
         return {
             'Loss_total': Loss_total,

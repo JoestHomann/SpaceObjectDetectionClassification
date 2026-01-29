@@ -47,6 +47,8 @@ WD_GRID = [1e-5, 1e-4]          # Weight decay
 SIGMA_GRID = [0.5]    # Gaussian heatmap standard deviation
 K_GRID = [25.0]      # Positive sample weight for BCE loss
 
+#not many parameters, easy to implement
+
 EPOCHS = 15   # short runs for HPO
 DATASET_ROOT = "D:/SpaceObjectDetection-YOLO/data/spark-2022-stream-1"
 

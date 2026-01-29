@@ -61,8 +61,8 @@ class LossConfig:
         BCE_scale: float
             Scaling factor for Binary Cross Entropy loss component.
     """
-    gaussHm_sigma: float = 2.0
-    BCE_scale: float = 10.0
+    gaussHm_sigma: float = 0.5
+    BCE_scale: float = 25
 
 @dataclass(frozen=True)
 class DataConfig:
@@ -74,7 +74,7 @@ class DataConfig:
         root: str
             Dataset root directory path.
         normalize: str
-            Normalzation mehtod for input images (Resnet, imagenet).
+            Normalization method for input images (Resnet, imagenet).
             First try: Imagenet
             Possible improvements: Dataset specific normalization
         num_classes: int

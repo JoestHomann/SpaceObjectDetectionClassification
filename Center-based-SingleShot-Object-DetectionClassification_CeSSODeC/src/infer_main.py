@@ -155,9 +155,7 @@ def main() -> None:
         if len(image_paths) == 0:                       # If no images found in directory, raise error
             raise RuntimeError(f"No images found in directory: {img_path}")
     else:
-        raise FileNotFoundError(f"Invalid imagePath: {img_path}")   # If invalid path provided, raise error   
-
-    device = torch.device(config_inf.train.device) # Initialize device
+        raise FileNotFoundError(f"Invalid imagePath: {img_path}")   # If invalid path provided, raise error
 
     # Load the trained model for inference
     model = load_model_for_inference(
@@ -190,7 +188,7 @@ def main() -> None:
     # Save inference results for each image and visualize them
     for res in results:
         img_name = Path(res["input_path"]).name
-        save_path = output_dir / f"inference_result_{img_name}"
+        save_path = output_dir / f"inference_result_{img_name}.jpg"
 
         # Visualize via helper function
         visualize_single_inference(

@@ -5,7 +5,7 @@
 /data/
 
 # Training outputs
-runs/
+/runs/
 
 # Infer:runs outpus
 Center-based-SingleShot-Object-DetectionClassification_CeSSODeC/src/infer_runs

@@ -36,6 +36,7 @@ import json
 import subprocess
 from pathlib import Path
 import torch
+import sys
 
 # -------------------------------
 # Grid definitions for HPO
@@ -43,8 +44,8 @@ import torch
 
 LR_GRID = [1e-4, 3e-4]          # Learning rate
 WD_GRID = [1e-5, 1e-4]          # Weight decay
-SIGMA_GRID = [0.5, 1.5, 2.5]    # Gaussian heatmap standard deviation
-K_GRID = [10.0, 25.0, 40.0]      # Positive sample weight for BCE loss
+SIGMA_GRID = [0.5]    # Gaussian heatmap standard deviation
+K_GRID = [25.0]      # Positive sample weight for BCE loss
 
 EPOCHS = 15   # short runs for HPO
 DATASET_ROOT = "D:/SpaceObjectDetection-YOLO/data/spark-2022-stream-1"
@@ -74,7 +75,7 @@ for lr, weight_decay, sigma, k in itertools.product(
     
     # Build command to run training with current hyperparameters
     command = [
-        "python", "train_main.py",
+        sys.executable, "train_main.py",
         "--datasetRoot", DATASET_ROOT,
         "--epochs", str(EPOCHS),
         "--lr", str(lr),

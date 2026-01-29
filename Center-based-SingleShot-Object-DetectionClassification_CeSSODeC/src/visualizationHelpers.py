@@ -30,12 +30,14 @@
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
 
-from cmath import rect
+#from cmath import rect
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torchvision.utils as vutils
 from torch.utils.data import DataLoader
+import math
+
 
 from config import RunConfig
 
@@ -263,14 +265,26 @@ def visualize_single_inference(
     # Draw center point
     ax.plot(cx, cy, "ro")   # Red dot at center
 
-    # Label
-    cls = pred["cls_hat"]
-    score = pred["center_score"]
+    # Class label prediction
+    cls = int(pred["cls_hat"])           # Predicted class index as integer
+
+    # Center logit score
+    score_logit = pred["center_score"]
+    
+    center_probability = torch.sigmoid(torch.tensor(score_logit)).item()  # Convert logit to probability
+
+    class_logits = np.array(pred["cls_logits_list"], dtype=np.float64)  # Class logits as numpy array
+    class_logits = class_logits - np.max(class_logits)                     # For numerical stability
+    class_probabilities = np.exp(class_logits) / np.sum(np.exp(class_logits))      # Softmax to get class probabilities
+    class_probability = float(class_probabilities[cls])                                          # Probability of predicted class
+
+    combined_probability = center_probability * class_probability   # Combined score
+
 
     if class_names:
-        label = f"{class_names[cls]} | {score:.2f}"
+        label = f"{class_names[cls]} | {combined_probability:.3f}"
     else:
-        label = f"Class {cls} | {score:.2f}"
+        label = f"Class {cls} | {combined_probability:.3f}"
 
     # Draw label above bounding box 
     ax.text(

@@ -98,9 +98,9 @@ def build_config_inf(ParserArguments: argparse.Namespace) -> RunConfig:
         if imgsz % stride_S != 0:
             raise ValueError(f"imgsz ({imgsz}) must be divisible by stride_S ({stride_S})")
         
-        H = imgsz // stride_S
-        W = imgsz // stride_S
-        grid = GridConfig(imgsz=imgsz, stride_S=stride_S, H=H, W=W)
+        H = imgsz // stride_S       # Height in feature map
+        W = imgsz // stride_S       # Width in feature map
+        grid = GridConfig(imgsz=imgsz, stride_S=stride_S, H=H, W=W)     # Update grid with new values
     
     # Initialize instance/object of class DataConfig
     data = DataConfig(datasetRoot="")  # Dataset root not needed for inference
@@ -126,7 +126,8 @@ def build_config_inf(ParserArguments: argparse.Namespace) -> RunConfig:
 
 def main() -> None:
     """
-    Main function to run inference from command line.
+    Main function for inference script. Builds configuration with parsed command line arguments,
+    loads the model, and runs inference on the specified image(s).
     
     Inputs:
         None
@@ -138,22 +139,20 @@ def main() -> None:
     config_inf = build_config_inf(parsedArguments)      # Writes those parsed command line values into the RunConfig (with DataConfig, GridConfig, ModelConfig, TrainConfig).
                                                         # If a command line option is None (so not provided), it keeps the default from the config
 
-    img_path = Path(parsedArguments.imagePath)
+    img_path = Path(parsedArguments.imagePath)          # Path to input image file, parsed via --imagePath command line argument
 
-    if img_path.is_file():
-        image_paths = [str(img_path)]
-    elif img_path.is_dir():
+    # Determine if input is a file or directory and gather image paths
+    if img_path.is_file():                              # Single image file -> only one image    
+        image_paths = [str(img_path)]                   # Single image path
+    elif img_path.is_dir():                             # Directory of images -> gather all image files in directory
         image_paths = sorted([
-            str(p) for p in img_path.iterdir()
-            if p.suffix.lower() in [".jpg", ".png", ".jpeg"]
+            str(p) for p in img_path.iterdir()          # Iterate over files in directory
+            if p.suffix.lower() in [".jpg"]             # Filter for .jpg files only
         ])
-        if len(image_paths) == 0:
+        if len(image_paths) == 0:                       # If no images found in directory, raise error
             raise RuntimeError(f"No images found in directory: {img_path}")
     else:
-        raise FileNotFoundError(f"Invalid imagePath: {img_path}")
-
-    img_path = Path(parsedArguments.imagePath)
-
+        raise FileNotFoundError(f"Invalid imagePath: {img_path}")   # If invalid path provided, raise error   
 
     device = torch.device(config_inf.train.device) # Initialize device
 
@@ -166,12 +165,13 @@ def main() -> None:
 )
   
     
-
+    # Load inference configuration
     infer_cfg = InferConfig(
         device=config_inf.train.device,
         normalize=config_inf.data.normalize
     )
 
+    # Run inference on the input images
     results = run_inference(
         ckpt_path=parsedArguments.checkpointPath,
         inputs=image_paths,
@@ -180,22 +180,16 @@ def main() -> None:
         infer_cfg=infer_cfg,
     )
 
-
-    # visualize_single_inference(
-    #     img_path=parsedArguments.imagePath,
-    #     pred=pred,
-    #     stride_S=config_inf.grid.stride_S,
-    #     imgsz=config_inf.grid.imgsz,
-    #     save_path="CESSODEC_runs\inference_result_single.png"
-    # )
-
-    output_dir = Path("CESSODEC_runs") / "Images_predict"
+    # Create output directory for inference results if it doesn't exist yet
+    output_dir = Path("infer_runs") / "Images_predict"
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Save inference results for each image and visualize them
     for res in results:
         img_name = Path(res["input_path"]).name
         save_path = output_dir / f"inference_result_{img_name}"
 
+        # Visualize via helper function
         visualize_single_inference(
             img_path=res["input_path"],
             pred=res,

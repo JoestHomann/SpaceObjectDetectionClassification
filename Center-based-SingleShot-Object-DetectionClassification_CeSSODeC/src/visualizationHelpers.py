@@ -30,6 +30,7 @@
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
 
+from cmath import rect
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -197,7 +198,7 @@ def visualize_pred_vs_gt(model: torch.nn.Module, loader: DataLoader, config: Run
     grid = vutils.make_grid(imgs, nrow=2, padding=2)                  # Create a grid of images with crosses
     return grid
 
-
+# Visualize inference result for a single image
 def visualize_single_inference(
     img_path: str,
     pred: dict,
@@ -218,7 +219,7 @@ def visualize_single_inference(
         save_path: If given, saves figure instead of showing it
     """
 
-    # Load image (same resizing as inference!)
+    # Load image (same resizing as inference)
     img = Image.open(img_path).convert("RGB")
     img = img.resize((imgsz, imgsz))
 
@@ -237,11 +238,11 @@ def visualize_single_inference(
     # Box decoding
     dx, dy, w, h = pred["box_hat_list"]
 
-    # Assume dx,dy are offsets inside the cell (0..1)
+    # Adjust center coordinates with offsets
     cx = cx + dx * stride_S
     cy = cy + dy * stride_S
 
-    # Assume w,h are relative to image size (0..1)
+    # Box width and height in pixels scaled to image size
     w_px = w * imgsz
     h_px = h * imgsz
 
@@ -249,7 +250,7 @@ def visualize_single_inference(
     y1 = cy - h_px / 2
 
     # Draw bounding box
-    rect = patches.Rectangle(
+    boundingBox = patches.Rectangle(
         (x1, y1),
         w_px,
         h_px,
@@ -257,10 +258,10 @@ def visualize_single_inference(
         edgecolor="red",
         facecolor="none"
     )
-    ax.add_patch(rect)
+    ax.add_patch(boundingBox)
 
     # Draw center point
-    ax.plot(cx, cy, "ro")
+    ax.plot(cx, cy, "ro")   # Red dot at center
 
     # Label
     cls = pred["cls_hat"]
@@ -271,6 +272,7 @@ def visualize_single_inference(
     else:
         label = f"Class {cls} | {score:.2f}"
 
+    # Draw label above bounding box 
     ax.text(
         x1,
         y1 - 5,
@@ -280,8 +282,9 @@ def visualize_single_inference(
         bbox=dict(facecolor="black", alpha=0.5, pad=2)
     )
 
-    ax.set_axis_off()
+    ax.set_axis_off()   # Hide axes
 
+    # Save or show figure
     if save_path:
         plt.savefig(save_path, bbox_inches="tight", dpi=150)
         plt.close(fig)

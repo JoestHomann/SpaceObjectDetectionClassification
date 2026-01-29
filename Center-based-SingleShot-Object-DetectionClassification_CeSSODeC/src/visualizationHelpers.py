@@ -38,6 +38,10 @@ from torch.utils.data import DataLoader
 
 from config import RunConfig
 
+from PIL import Image
+import matplotlib.patches as patches
+
+
 
 # def plotHeatmap # TODO: Implement heatmap plotting function
 # def plotBoundingBoxes # TODO: Implement bounding box plotting function
@@ -194,3 +198,92 @@ def visualize_pred_vs_gt(model: torch.nn.Module, loader: DataLoader, config: Run
     return grid
 
 
+def visualize_single_inference(
+    img_path: str,
+    pred: dict,
+    stride_S: int,
+    imgsz: int,
+    class_names: list[str] | None = None,
+    save_path: str | None = None,
+):
+    """
+    Visualize inference result for a single image.
+
+    Args:
+        img_path: Path to input image
+        pred: Output dict from decode_single
+        stride_S: Grid stride in pixels
+        imgsz: Input image size used during inference
+        class_names: Optional list of class names
+        save_path: If given, saves figure instead of showing it
+    """
+
+    # Load image (same resizing as inference!)
+    img = Image.open(img_path).convert("RGB")
+    img = img.resize((imgsz, imgsz))
+
+    fig, ax = plt.subplots(1, figsize=(6, 6))
+    ax.imshow(img)
+
+    # Grid indices
+    i_hat, j_hat = pred["grid_Indices_hat"]
+    i_hat = int(i_hat)
+    j_hat = int(j_hat)
+
+    # Grid cell center in pixel coordinates
+    cx = j_hat * stride_S + stride_S / 2
+    cy = i_hat * stride_S + stride_S / 2
+
+    # Box decoding
+    dx, dy, w, h = pred["box_hat_list"]
+
+    # Assume dx,dy are offsets inside the cell (0..1)
+    cx = cx + dx * stride_S
+    cy = cy + dy * stride_S
+
+    # Assume w,h are relative to image size (0..1)
+    w_px = w * imgsz
+    h_px = h * imgsz
+
+    x1 = cx - w_px / 2
+    y1 = cy - h_px / 2
+
+    # Draw bounding box
+    rect = patches.Rectangle(
+        (x1, y1),
+        w_px,
+        h_px,
+        linewidth=2,
+        edgecolor="red",
+        facecolor="none"
+    )
+    ax.add_patch(rect)
+
+    # Draw center point
+    ax.plot(cx, cy, "ro")
+
+    # Label
+    cls = pred["cls_hat"]
+    score = pred["center_score"]
+
+    if class_names:
+        label = f"{class_names[cls]} | {score:.2f}"
+    else:
+        label = f"Class {cls} | {score:.2f}"
+
+    ax.text(
+        x1,
+        y1 - 5,
+        label,
+        color="red",
+        fontsize=10,
+        bbox=dict(facecolor="black", alpha=0.5, pad=2)
+    )
+
+    ax.set_axis_off()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        plt.close(fig)
+    else:
+        plt.show()

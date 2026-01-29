@@ -44,6 +44,7 @@ import torch
 
 from config import DataConfig, GridConfig, ModelConfig, RunConfig, TrainConfig
 from infer import load_model_for_inference, preprocess_image, decode_single
+from visualizationHelpers import visualize_single_inference
 
 
 
@@ -118,7 +119,8 @@ def build_config_inf(ParserArguments: argparse.Namespace) -> RunConfig:
         train = TrainConfig(device=device)  
 
     # Return the combined RunConfig
-    return RunConfig(data=data, grid=grid, model=model, train=train)
+    return RunConfig(data=data, grid=grid, model=model, train=train, loss=None)  # LossConfig not needed for inference
+
 
 
 def main() -> None:
@@ -134,6 +136,9 @@ def main() -> None:
     parsedArguments = parse_args_inf()                  # Reads the command-line inputs (e.g. --checkpointPath) and stores them in an the argparse.Namespace
     config_inf = build_config_inf(parsedArguments)      # Writes those parsed command line values into the RunConfig (with DataConfig, GridConfig, ModelConfig, TrainConfig).
                                                         # If a command line option is None (so not provided), it keeps the default from the config
+
+    img_path = Path(parsedArguments.imagePath)
+
 
     device = torch.device(config_inf.train.device) # Initialize device
 
@@ -159,6 +164,16 @@ def main() -> None:
 
 
     print(pred) # Print the prediction results
+
+    visualize_single_inference(
+        img_path=parsedArguments.imagePath,
+        pred=pred,
+        stride_S=config_inf.grid.stride_S,
+        imgsz=config_inf.grid.imgsz,
+        save_path="CESSODEC_runs\inference_result.png"
+    )
+    
+
 
 if __name__ == "__main__":
     main()

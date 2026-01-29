@@ -161,9 +161,9 @@ def train_one_epoch(
     center_correct = 0  # Number of correct center predictions
 
     # Initilaize variables for acc tracking
-    p_gt_sum = 0.0
-    p_max_sum = 0.0
-    p_bg_sum = 0.0
+    center_prob_at_gt_sum = 0.0       # Sum of center probabilities at GT location
+    center_prob_max_sum = 0.0         # Sum of maximum center probabilities per sample
+    center_prob_background_sum = 0.0  # Sum of mean background center probabilities
     n_samples = 0
 
     # Iterate over batches
@@ -219,9 +219,9 @@ def train_one_epoch(
             p_max = probs.view(B, -1).max(dim=1).values  # Max probabilities in each sample
             p_bg = probs.mean(dim=(1, 2))  # Mean probabilities (background)
 
-            p_gt_sum += p_gt.sum().item()
-            p_max_sum += p_max.sum().item()
-            p_bg_sum += p_bg.sum().item()
+            center_prob_at_gt_sum += p_gt.sum().item()
+            center_prob_max_sum += p_max.sum().item()
+            center_prob_background_sum += p_bg.sum().item()
             n_samples += B
 
     # Backward pass and optimization step
@@ -238,9 +238,9 @@ def train_one_epoch(
     out["accuracy"] = correct / max(total, 1)
     out["center_acc"] = center_correct / max(total, 1)
 
-    out["p_gt_avg"] = p_gt_sum / max(n_samples, 1)
-    out["p_max_avg"] = p_max_sum / max(n_samples, 1)
-    out["p_bg_avg"] = p_bg_sum / max(n_samples, 1)
+    out["center_prob_at_gt_avg"] = center_prob_at_gt_sum / max(n_samples, 1)
+    out["center_prob_max_avg"] = center_prob_max_sum / max(n_samples, 1)
+    out["center_prob_background_avg"] = center_prob_background_sum / max(n_samples, 1)
     return out
 
 
@@ -284,9 +284,9 @@ def validate(
                  "Loss_class": 0.0, "Loss_total": 0.0}
     total_samples = 0
     # Initialize variables for acc tracking
-    p_gt_sum = 0.0
-    p_max_sum = 0.0
-    p_bg_sum = 0.0
+    center_prob_at_gt_sum = 0.0       # Sum of center probabilities at GT location
+    center_prob_max_sum = 0.0         # Sum of maximum center probabilities per sample
+    center_prob_background_sum = 0.0  # Sum of mean background center probabilities
     n_samples = 0
 
     for x, ij_gt, bbox_gt_norm, cls_gt in loader:
@@ -305,9 +305,9 @@ def validate(
         i_gt = ij_gt[:, 0]
         j_gt = ij_gt[:, 1]
 
-        p_gt_sum += probs[ar, i_gt, j_gt].sum().item()
-        p_max_sum += probs.view(B, -1).max(dim=1).values.sum().item()
-        p_bg_sum += probs.mean(dim=(1, 2)).sum().item()
+        center_prob_at_gt_sum += probs[ar, i_gt, j_gt].sum().item()
+        center_prob_max_sum += probs.view(B, -1).max(dim=1).values.sum().item()
+        center_prob_background_sum += probs.mean(dim=(1, 2)).sum().item()
         n_samples += B
 
         # Val losses
@@ -377,9 +377,9 @@ def validate(
         "per_class_acc": per_class_acc,
         "confusion_matrix": confusionMatrixAsNumpy,
         **val_losses,
-        "p_gt_avg": p_gt_sum / max(n_samples, 1),
-        "p_max_avg": p_max_sum / max(n_samples, 1),
-        "p_bg_avg": p_bg_sum / max(n_samples, 1),
+        "center_prob_at_gt_avg": center_prob_at_gt_sum / max(n_samples, 1),
+        "center_prob_max_avg": center_prob_max_sum / max(n_samples, 1),
+        "center_prob_background_avg": center_prob_background_sum / max(n_samples, 1),
     }
 
 

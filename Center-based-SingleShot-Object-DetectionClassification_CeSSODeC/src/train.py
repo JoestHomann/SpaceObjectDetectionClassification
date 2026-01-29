@@ -185,7 +185,7 @@ def train_one_epoch(
                 gridIndices_gt=gridIndices_gt,
                 bbox_gt_norm=bbox_gt_norm,
                 cls_gt=cls_gt,
-                gaussHM_sigma=cfg.loss.gaussHm_sigma,
+                gaussHm_sigma=cfg.loss.gaussHm_sigma,
                 BCE_scale=cfg.loss.BCE_scale,
             )
 
@@ -282,7 +282,12 @@ def validate(
     # Val loss accumulation (same keys as train_one_epoch)
     loss_sums = {"Loss_center": 0.0, "Loss_box": 0.0,
                  "Loss_class": 0.0, "Loss_total": 0.0}
-    n_batches = 0
+    total_samples = 0
+    # Initialize variables for acc tracking
+    p_gt_sum = 0.0
+    p_max_sum = 0.0
+    p_bg_sum = 0.0
+    n_samples = 0
 
     for x, ij_gt, bbox_gt_norm, cls_gt in loader:
         x = x.to(device)
@@ -292,6 +297,19 @@ def validate(
 
         center_pred, box_pred, cls_pred = model(x)
 
+        # Average probabilities calculation
+        B = x.shape[0]
+        probs = torch.sigmoid(center_pred[:, 0])  # logits -> probs
+
+        ar = torch.arange(B, device=device)
+        i_gt = ij_gt[:, 0]
+        j_gt = ij_gt[:, 1]
+
+        p_gt_sum += probs[ar, i_gt, j_gt].sum().item()
+        p_max_sum += probs.view(B, -1).max(dim=1).values.sum().item()
+        p_bg_sum += probs.mean(dim=(1, 2)).sum().item()
+        n_samples += B
+
         # Val losses
         losses = loss_fn(
             center_preds=center_pred,
@@ -300,10 +318,12 @@ def validate(
             gridIndices_gt=ij_gt,
             bbox_gt_norm=bbox_gt_norm,
             cls_gt=cls_gt,
+            gaussHm_sigma=cfg.loss.gaussHm_sigma,
+            BCE_scale=cfg.loss.BCE_scale,
         )
         for k in loss_sums:
-            loss_sums[k] += float(losses[k].item())
-        n_batches += 1
+            loss_sums[k] += float(losses[k].item()) * x.shape[0]  # Sum weighted by batch size
+        total_samples += x.shape[0]
 
         # Decode center argmax
         B = x.shape[0]
@@ -340,7 +360,7 @@ def validate(
     acc = correct / max(total, 1)
     center_acc = center_correct / max(total, 1)
 
-    val_losses = {k: v / max(n_batches, 1) for k, v in loss_sums.items()}
+    val_losses = {k: v / max(total_samples, 1) for k, v in loss_sums.items()}
 
     per_class_acc = (correct_per_class.float(
     ) / torch.clamp(total_per_class.float(), min=1.0)).cpu().tolist()
@@ -355,6 +375,9 @@ def validate(
         "per_class_acc": per_class_acc,
         "confusion_matrix": confusionMatrixAsNumpy,
         **val_losses,
+        "p_gt_avg": p_gt_sum / max(n_samples, 1),
+        "p_max_avg": p_max_sum / max(n_samples, 1),
+        "p_bg_avg": p_bg_sum / max(n_samples, 1),
     }
 
 
@@ -447,6 +470,11 @@ def fit(cfg: RunConfig) -> None:
         # Accuracies
         writer.add_scalar("train/accuracy", train_metrics["accuracy"], epoch)
         writer.add_scalar("train/center_acc", train_metrics["center_acc"], epoch)
+
+        # Average probabilities
+        writer.add_scalar("train/p_gt_avg", train_metrics["p_gt_avg"], epoch)
+        writer.add_scalar("train/p_max_avg", train_metrics["p_max_avg"], epoch)
+        writer.add_scalar("train/p_bg_avg", train_metrics["p_bg_avg"], epoch)
         
         # Val metrics
         # Losses
@@ -458,6 +486,11 @@ def fit(cfg: RunConfig) -> None:
         writer.add_scalar("val/accuracy", val_metrics["accuracy"], epoch)
         writer.add_scalar("val/center_acc", val_metrics["center_acc"], epoch)
         writer.flush() # Ensure data is written to disk
+
+        #Average probabilities on val set
+        writer.add_scalar("val/p_gt_avg", val_metrics["p_gt_avg"], epoch)
+        writer.add_scalar("val/p_max_avg", val_metrics["p_max_avg"], epoch)
+        writer.add_scalar("val/p_bg_avg", val_metrics["p_bg_avg"], epoch)
 
         # Confusion Matrix
         class_names = getattr(cfg.model, "class_names", None) # List of class names, if empty read from config

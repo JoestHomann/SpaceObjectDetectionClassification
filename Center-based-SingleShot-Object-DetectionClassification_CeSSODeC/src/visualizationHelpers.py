@@ -68,7 +68,7 @@ def plotConfMatrix(confusion_matrix: np.ndarray, class_names: list[str]):
     # Always normalize the confusion matrix
     row_sums = confusionMatrix.sum(axis=1, keepdims=True)               # Sum of each row (true labels)
     confusionMatrix = confusionMatrix / np.clip(row_sums, 1.0, None)    # Normalize each row to sum to 1, avoid division by zero by clipping
-
+    confusionMatrix = confusionMatrix.T                                 # Transpose for correct orientation (so its like the YOLO conf matrix)
 
     figure, axes = plt.subplots(figsize=(8, 8))                 # Set figure size and axes
     imageObject = axes.imshow(confusionMatrix,                  # Display the confusion matrix as an image 
@@ -77,7 +77,7 @@ def plotConfMatrix(confusion_matrix: np.ndarray, class_names: list[str]):
                             vmin=0.0, vmax=1.0                  # Set color scale from 0 to 1
                                )         
 
-    axes.set_title("Confusion Matrix (normalized)")   # Set title of the plot
+    axes.set_title("Confusion Matrix (normalized)")             # Set title of the plot
     figure.colorbar(imageObject, ax=axes, fraction=0.046, pad=0.04)  # Add colorbar to the plot
 
     tick_marks = np.arange(len(class_names))                     # Create tick marks for each class
@@ -86,8 +86,8 @@ def plotConfMatrix(confusion_matrix: np.ndarray, class_names: list[str]):
     axes.set_xticklabels(class_names, rotation=45, ha="right")   # Set x-tick labels with rotation
     axes.set_yticklabels(class_names)                            # Set y-tick labels
 
-    axes.set_ylabel("True label")                                # Set y-axis label
-    axes.set_xlabel("Predicted label")                           # Set x-axis label
+    axes.set_xlabel("True label")                                # Set x-axis label
+    axes.set_ylabel("Predicted label")                           # Set y-axis label
 
     # Write values/probabilities to cells
     for i in range(confusionMatrix.shape[0]):
@@ -182,7 +182,7 @@ def visualize_pred_vs_gt(
     model: torch.nn.Module,
     loader: DataLoader,
     config: RunConfig,
-    images2visualize: int = 4,
+    images2visualize: int = 64,
     class_names: list[str] | None = None
 ) -> torch.Tensor:
 
@@ -328,7 +328,7 @@ def visualize_pred_vs_gt(
             labels=labels,
             colors=["green", "red"],
             width=2,
-            font_size=14,
+            font_size=10,
         )
 
         # Draw center points
@@ -339,9 +339,9 @@ def visualize_pred_vs_gt(
         _draw_cross_chw(image2drawOn, int(y_center_pred), int(x_center_pred), color_pred, cross_radius=6)  # Draw predicted center cross
         imagesList.append(image2drawOn)
 
-    grid = vutils.make_grid(imagesList, nrow=2, padding=2)
+    nrow = int(np.ceil(math.sqrt(number_images)))   # Number of images per row in grid
+    grid = vutils.make_grid(imagesList, nrow=nrow, padding=2)
     return grid
-
 
 # Visualize inference result for a single image
 def visualize_single_inference(

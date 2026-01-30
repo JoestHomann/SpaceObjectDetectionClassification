@@ -426,9 +426,15 @@ def visualize_single_inference(
     # Calculate combined probability as product of center and class probabilities
     combined_probability = center_probability * class_probability
 
-    # Write label with class and probability
-    label = f"Class {class_label_int} | {combined_probability:.3f}"
+    # Determine class label string: use class_names if available and valid, otherwise fall back to index
+    if "class_names" in locals() and class_names is not None and isinstance(class_names, (list, tuple)) \
+            and 0 <= class_label_int < len(class_names):
+        class_label_str = str(class_names[class_label_int])
+    else:
+        class_label_str = f"Class {class_label_int}"
 
+    # Write label with class (or class index) and probability
+    label = f"{class_label_str} | {combined_probability:.3f}"
     # Draw label above bounding box 
     img_u8 = vutils.draw_bounding_boxes(
         image,

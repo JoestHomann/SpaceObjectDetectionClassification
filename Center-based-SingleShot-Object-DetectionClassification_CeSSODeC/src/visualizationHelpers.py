@@ -37,18 +37,12 @@ import torch
 import torchvision.utils as vutils
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from torchvision.transforms.functional import resize
+from torchvision.io import read_image, write_jpeg
 import math
-
 
 from config import RunConfig
 
-from PIL import Image
-import matplotlib.patches as patches
-
-
-
-# def plotHeatmap # TODO: Implement heatmap plotting function
-# def plotBoundingBoxes # TODO: Implement bounding box plotting function
 
 
 # Plotting function for confusion matrix
@@ -121,35 +115,44 @@ def _denormalize_for_tb(x: torch.Tensor, config: RunConfig) -> torch.Tensor:
 
     return x.clamp(0.0, 1.0)
 
-def _draw_cross_chw(image: torch.Tensor, y_center: int, x_center: int, color: torch.Tensor, cross_radius: int = 5) -> None:
+def _draw_cross_uint8_chw(image_u8: torch.Tensor, y_center: int, x_center: int, cross_radius: int = 5, color: tuple[int, int, int] = (255, 0, 0)) -> None:
     """
-    Draws a cross at the specified center coordinates on a CHW image tensor.
+    Draws a cross on a uint8 image tensor at the specified center coordinates.
+
     Inputs:
-        - image: Image tensor in CHW format (3, H, W)
+        - image_u8: Image tensor in uint8 format (3, H, W)
         - y_center: Y-coordinate of the center of the cross
         - x_center: X-coordinate of the center of the cross
-        - color: Color tensor for the cross (3,)
         - cross_radius: Radius of the cross arms
-
+        - color: Color of the cross as an (R, G, B) tuple
     Outputs:
-        - None (the image tensor is modified in place)
+        - None (the function modifies the image tensor in place)
     """
+    # Get image dimensions (Batch size is not needed here)
+    _, H, W = image_u8.shape
 
-    _, H, W = image.shape
-
-    # Clamp center coordinates to image bounds and convert to int
+    # Clamp center coordinates to image bounds
     y_center = int(max(0, min(H - 1, y_center)))
     x_center = int(max(0, min(W - 1, x_center)))
 
-    # Calculate the bounding coordinates for the cross arms
+    # Calculate cross arm boundaries
     y_0 = max(0, y_center - cross_radius)
     y_1 = min(H - 1, y_center + cross_radius)
     x_0 = max(0, x_center - cross_radius)
     x_1 = min(W - 1, x_center + cross_radius)
 
-    # Draw vertical and horizontal lines to form a cross
-    image[:, y_0:y_1 + 1, x_center] = color.view(3, 1)   # Vertical line
-    image[:, y_center, x_0:x_1 + 1] = color.view(3, 1)   # Horizontal line
+    # Draw vertical and horizontal lines of the cross on the image tensor
+    r, g, b = color                             # Unpack color tuple
+
+    # Draw vertical line
+    image_u8[0, y_0:y_1 + 1, x_center] = r      # Red channel
+    image_u8[1, y_0:y_1 + 1, x_center] = g      # Green channel
+    image_u8[2, y_0:y_1 + 1, x_center] = b      # Blue channel
+
+    # Draw horizontal line
+    image_u8[0, y_center, x_0:x_1 + 1] = r      # Red channel
+    image_u8[1, y_center, x_0:x_1 + 1] = g      # Green channel
+    image_u8[2, y_center, x_0:x_1 + 1] = b      # Blue channel
 
     return None
 
@@ -167,6 +170,7 @@ def _xywh_to_xyxy(x_center_pred: float, y_center_pred: float, w_pred: float, h_p
     Outputs:
         - x1, y1, x2, y2: Corner coordinates of the bounding box
     """
+    # Calculate corner coordinates
     x1_pred = x_center_pred - 0.5 * w_pred
     y1_pred = y_center_pred - 0.5 * h_pred
     x2_pred = x_center_pred + 0.5 * w_pred
@@ -174,7 +178,16 @@ def _xywh_to_xyxy(x_center_pred: float, y_center_pred: float, w_pred: float, h_p
     return x1_pred, y1_pred, x2_pred, y2_pred
 
 def _to_uint8_chw(image2drawOn_chw: torch.Tensor) -> torch.Tensor:
-    return (image2drawOn_chw * 255.0).clamp(0.0, 255.0).to(torch.uint8)
+    """ 
+    Converts a float image tensor in CHW format to uint8 format for drawing.
+    
+    Inputs:
+        - image2drawOn_chw: Image tensor in float format (3, H, W) with values in [0, 1]
+
+    Outputs:
+        - image_u8: Image tensor in uint8 format
+    """
+    return (image2drawOn_chw * 255.0).clamp(0.0, 255.0).to(torch.uint8)     # Convert to uint8
 
 # Visualize predictions vs. ground truth for a batch of images
 @torch.no_grad()
@@ -182,7 +195,7 @@ def visualize_pred_vs_gt(
     model: torch.nn.Module,
     loader: DataLoader,
     config: RunConfig,
-    images2visualize: int = 64,
+    images2visualize: int = 16,
     class_names: list[str] | None = None
 ) -> torch.Tensor:
 
@@ -231,9 +244,9 @@ def visualize_pred_vs_gt(
     # Denormalize images for visualization (CPU, 0..1)
     inputBatchImages_denormalized = _denormalize_for_tb(inputBatchImages, config).detach().cpu()
 
-    # Set olors for drawing
-    color_gt = torch.tensor([0.0, 1.0, 0.0])    # Green for ground truth
-    color_pred = torch.tensor([1.0, 0.0, 0.0])  # Red for prediction
+    # Set colors for drawing
+    color_gt = (0, 255, 0)    # Green for ground truth
+    color_pred = (255, 0, 0)  # Red for prediction
 
     # Get number of images to visualize from input argument or take full batch when batch is smaller than images2visualize
     number_images = min(images2visualize, B)
@@ -327,16 +340,14 @@ def visualize_pred_vs_gt(
             boxes=boxes,
             labels=labels,
             colors=["green", "red"],
-            width=2,
-            font_size=10,
+            width=2
         )
 
-        # Draw center points
-        image2drawOn = (img_u8.float() / 255.0).clamp(0.0, 1.0)
-
         # Draw center crosses
-        _draw_cross_chw(image2drawOn, int(y_center_gt), int(x_center_gt), color_gt, cross_radius=6)  # Draw ground truth center cross
-        _draw_cross_chw(image2drawOn, int(y_center_pred), int(x_center_pred), color_pred, cross_radius=6)  # Draw predicted center cross
+        _draw_cross_uint8_chw(img_u8, int(y_center_gt), int(x_center_gt), cross_radius=6, color=color_gt)  # Draw ground truth center cross
+        _draw_cross_uint8_chw(img_u8, int(y_center_pred), int(x_center_pred), cross_radius=6, color=color_pred)  # Draw predicted center cross
+
+        image2drawOn = (img_u8.float() / 255.0).clamp(0.0, 1.0)
         imagesList.append(image2drawOn)
 
     nrow = int(np.ceil(math.sqrt(number_images)))   # Number of images per row in grid
@@ -364,12 +375,10 @@ def visualize_single_inference(
         save_path: If given, saves figure instead of showing it
     """
 
-    # Load image (same resizing as inference)
-    img = Image.open(img_path).convert("RGB")
-    img = img.resize((imgsz, imgsz))
-
-    fig, ax = plt.subplots(1, figsize=(6, 6))
-    ax.imshow(img)
+    # Read image for torchvision, so that we can draw on it
+    image = read_image(img_path)      # Expects RGB image in (C,H,W) uint8
+    
+    image = resize(image, [imgsz, imgsz])   # Resize to inference size
 
     # Grid indices
     i_pred, j_pred = pred["grid_Indices_hat"]
@@ -380,10 +389,10 @@ def visualize_single_inference(
     x_center_cell = j_pred * stride_S + stride_S / 2
     y_center_cell = i_pred * stride_S + stride_S / 2
 
-    # Box decoding
+    # Box decoding at predicted cell: Get offsets dx, dy and size w, h
     dx, dy, w, h = pred["box_hat_list"]
 
-    # Adjust center coordinates with offsets
+    # Adjust center coordinates with offsets dx and dy
     x_center_pred = x_center_cell + dx * stride_S
     y_center_pred = y_center_cell + dy * stride_S
 
@@ -391,59 +400,53 @@ def visualize_single_inference(
     w_px = w * imgsz
     h_px = h * imgsz
 
+    # Calculate 
     x1 = x_center_pred - w_px / 2
     y1 = y_center_pred - h_px / 2
+    x2 = x_center_pred + w_px / 2
+    y2 = y_center_pred + h_px / 2
 
     # Draw bounding box
-    boundingBox = patches.Rectangle(
-        (x1, y1),
-        w_px,
-        h_px,
-        linewidth=2,
-        edgecolor="red",
-        facecolor="none"
-    )
-    ax.add_patch(boundingBox)
-
-    # Draw center point
-    ax.plot(x_center_pred, y_center_pred, "ro")   # Red dot at center
+    boundingBox = torch.tensor([[x1, y1, x2, y2]], dtype=torch.float32)
 
     # Class label prediction
-    cls = int(pred["cls_hat"])           # Predicted class index as integer
+    class_label_int = int(pred["cls_hat"])           # Predicted class index as integer
 
     # Center logit score
     score_logit = pred["center_score"]
     
-    center_probability = torch.sigmoid(torch.tensor(score_logit)).item()  # Convert logit to probability
+    # Convert logit to probability
+    center_probability = torch.sigmoid(torch.tensor(score_logit)).item()
 
-    class_logits = np.array(pred["cls_logits_list"], dtype=np.float64)  # Class logits as numpy array
-    class_logits = class_logits - np.max(class_logits)                     # For numerical stability
-    class_probabilities = np.exp(class_logits) / np.sum(np.exp(class_logits))      # Softmax to get class probabilities
-    class_probability = float(class_probabilities[cls])                                          # Probability of predicted class
+    # Calculate class probability from class logits via softmax
+    class_logits = torch.tensor(pred["cls_logits_list"], dtype=torch.float32)
+    class_probabilities = F.softmax(class_logits, dim=0)
+    class_probability = float(class_probabilities[class_label_int].item())
 
-    combined_probability = center_probability * class_probability   # Combined score
+    # Calculate combined probability as product of center and class probabilities
+    combined_probability = center_probability * class_probability
 
-
-    if class_names:
-        label = f"{class_names[cls]} | {combined_probability:.3f}"
-    else:
-        label = f"Class {cls} | {combined_probability:.3f}"
+    # Write label with class and probability
+    label = f"Class {class_label_int} | {combined_probability:.3f}"
 
     # Draw label above bounding box 
-    ax.text(
-        x1,
-        y1 - 5,
-        label,
-        color="red",
-        fontsize=10,
-        bbox=dict(facecolor="black", alpha=0.5, pad=2)
+    img_u8 = vutils.draw_bounding_boxes(
+        image,
+        boxes=boundingBox,
+        labels=[label],
+        colors=["red"],
+        width=2,
+        font_size=14,
     )
 
-    ax.set_axis_off()   # Hide axes
+    # Draw center cross on image using helper function
+    _draw_cross_uint8_chw(img_u8, int(round(y_center_pred)), int(round(x_center_pred)), cross_radius=6, color=(255, 0, 0))
 
-    # Save or show figure
-    if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
-        plt.close(fig)
-    else:
-        plt.show()
+    # If no save path is given, print error
+    if save_path is None:
+        raise ValueError("save_path must be provided when using visualize_single_inference (save-only).")
+
+    # Save the image with drawn boxes, crosses, and labels
+    write_jpeg(img_u8, save_path, quality=95)
+
+    return

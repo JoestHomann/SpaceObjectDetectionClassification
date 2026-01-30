@@ -512,7 +512,7 @@ def fit(cfg: RunConfig) -> None:
 
         # Predictions vs Ground Truth Visualization
         if epoch % 1 == 0:  # Log every n epochs to save space
-            pred_vs_gt_visualization = vh.visualize_pred_vs_gt(model, loaders["val"], cfg, images2visualize=4)  # Visualize predictions vs ground truth via helper function
+            pred_vs_gt_visualization = vh.visualize_pred_vs_gt(model, loaders["val"], cfg, images2visualize=16)  # Visualize predictions vs ground truth via helper function
             writer.add_image("val/pred_vs_gt", pred_vs_gt_visualization, epoch)  # Log the image grid to TensorBoard
             writer.flush()  # Ensure data is written to disk
 

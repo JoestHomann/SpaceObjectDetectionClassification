@@ -448,8 +448,7 @@ def visualize_single_inference(
         boxes=boundingBox,
         labels=[label],
         colors=["red"],
-        width=2,
-        font_size=14,
+        width=2
     )
 
     # Draw center cross on image using helper function

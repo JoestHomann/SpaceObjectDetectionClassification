@@ -42,10 +42,10 @@ import sys
 # Grid definitions for HPO
 # -------------------------------
 
-LR_GRID = [1e-4, 3e-4]          # Learning rate
-WD_GRID = [1e-5, 1e-4]          # Weight decay
-SIGMA_GRID = [0.5]    # Gaussian heatmap standard deviation
-K_GRID = [25.0]      # Positive sample weight for BCE loss
+LR_GRID = [1e-4]          # Learning rate
+WD_GRID = [1e-4]          # Weight decay
+SIGMA_GRID = [0.3, 0.5, 0.7]    # Gaussian heatmap standard deviation
+K_GRID = [25.0, 35.0, 45.0]     # Positive sample weight for BCE loss
 
 #not many parameters, easy to implement
 

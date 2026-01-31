@@ -6,6 +6,8 @@
 
 # Training outputs
 runs/
+*.pt
+*.pth
 
 # Infer:runs outpus
 Center-based-SingleShot-Object-DetectionClassification_CeSSODeC/src/infer_runs

@@ -27,6 +27,8 @@
 # Revision history:
 #   - Added TensorBoard logging (25-Jan-2026, J. Homann)
 #   - Added more TB logging and confusion matrix(27-Jan-2026, J. Homann)
+#   - Added prediction vs ground truth visualization (30-Jan-2026, J. Homann)
+#   - Refactored and cleaned up code (30-Jan-2026, J. Homann)
 #
 # Implemented in VSCode 1.108.1
 # 2026 in the Applied Machine Learning Course Project
@@ -64,11 +66,7 @@ from losses import SingleObjectLoss
 from checkpointIO import save_checkpoint, load_checkpoint
 
 # For TensorBoard logging
-from torch.utils.tensorboard import SummaryWriter
-import numpy as np
-import matplotlib.pyplot as plt
-import visualizationHelpers as vh
-from datetime import datetime
+import logging_tb as lg
 
 
 # ---------------------------------------------------------
@@ -401,11 +399,7 @@ def fit(cfg: RunConfig) -> None:
     - save last & best checkpoints
     """
     # TensorBoard Writer
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M")
-    
-    tb_dir = Path("runs/tensorboard") / f"{cfg.train.run_name}_{timestamp}"
-    tb_dir.mkdir(parents=True, exist_ok=True)
-    writer = SummaryWriter(log_dir=str(tb_dir)) # TODO: Make dynamic with timestamp or so
+    writer = lg.tb_writer_setup(logs_dir=Path("runs/tensorboard")) # Setup TensorBoard writer
 
 
     torch.manual_seed(cfg.train.seed)  # Set seed for reproducibility
@@ -472,54 +466,15 @@ def fit(cfg: RunConfig) -> None:
         )
 
         # TensorBoard logging
-
-        # Train metrics
-        # Losses
-        writer.add_scalar("train/Loss_total", train_metrics["Loss_total"], epoch)
-        writer.add_scalar("train/Loss_center", train_metrics["Loss_center"], epoch)
-        writer.add_scalar("train/Loss_box", train_metrics["Loss_box"], epoch)
-        writer.add_scalar("train/Loss_class", train_metrics["Loss_class"], epoch)
-        # Accuracies
-        writer.add_scalar("train/accuracy", train_metrics["accuracy"], epoch)
-        writer.add_scalar("train/center_acc", train_metrics["center_acc"], epoch)
-
-        # Average probabilities
-        writer.add_scalar("train/center_prob_at_gt_avg", train_metrics["center_prob_at_gt_avg"], epoch)
-        writer.add_scalar("train/center_prob_max_avg", train_metrics["center_prob_max_avg"], epoch)
-        writer.add_scalar("train/center_prob_background_avg", train_metrics["center_prob_background_avg"], epoch)
-        
-        # Val metrics
-        # Losses
-        writer.add_scalar("val/Loss_total", val_metrics["Loss_total"], epoch)
-        writer.add_scalar("val/Loss_center", val_metrics["Loss_center"], epoch)
-        writer.add_scalar("val/Loss_box", val_metrics["Loss_box"], epoch)
-        writer.add_scalar("val/Loss_class", val_metrics["Loss_class"], epoch)
-        # Accuracies
-        writer.add_scalar("val/accuracy", val_metrics["accuracy"], epoch)
-        writer.add_scalar("val/center_acc", val_metrics["center_acc"], epoch)
-        writer.flush() # Ensure data is written to disk
-
-        #Average probabilities on val set
-        writer.add_scalar("val/center_prob_at_gt_avg", val_metrics["center_prob_at_gt_avg"], epoch)
-        writer.add_scalar("val/center_prob_max_avg", val_metrics["center_prob_max_avg"], epoch)
-        writer.add_scalar("val/center_prob_background_avg", val_metrics["center_prob_background_avg"], epoch)
-
-        # Confusion Matrix
-        class_names = getattr(cfg.model, "class_names", None) # List of class names, if empty read from config
+        class_names = getattr(cfg.data, "class_names", None)
         if class_names is None:
-            class_names = [f"class_{i}" for i in range(int(getattr(cfg.model, "num_classes", 11)))]
+            num_classes = int(getattr(cfg.model, "num_classes", 11))
+            class_names = [f"class_{i}" for i in range(num_classes)]
 
-        figure_confusionMatrix = vh.plotConfMatrix(val_metrics["confusion_matrix"], class_names)   # Plot confusion matrix via helper function
-        writer.add_figure("val/confusion_matrix", figure_confusionMatrix, epoch)                # Log confusion matrix figure to TensorBoard
-        plt.close(figure_confusionMatrix)   # Close the figure to free memory
-        writer.flush()                      # Ensure data is written to disk
-
-        # Predictions vs Ground Truth Visualization
-        if epoch % 1 == 0:  # Log every n epochs to save space
-            pred_vs_gt_visualization = vh.visualize_pred_vs_gt(model, loaders["val"], cfg, images2visualize=4)  # Visualize predictions vs ground truth via helper function
-            writer.add_image("val/pred_vs_gt", pred_vs_gt_visualization, epoch)  # Log the image grid to TensorBoard
-            writer.flush()  # Ensure data is written to disk
-
+        lg.log_train_metrics(writer, epoch, train_metrics)
+        lg.log_val_metrics(writer, epoch, val_metrics)
+        lg.log_confusion_matrix(writer, epoch, val_metrics["confusion_matrix"], class_names)
+        lg.log_pred_vs_gt(writer, epoch, model, loaders["val"], cfg, class_names, images2visualize=16)
 
         acc = val_metrics["accuracy"]
 

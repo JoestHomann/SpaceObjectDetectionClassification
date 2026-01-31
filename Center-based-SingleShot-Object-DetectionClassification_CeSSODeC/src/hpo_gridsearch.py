@@ -42,10 +42,12 @@ import sys
 # Grid definitions for HPO
 # -------------------------------
 
-LR_GRID = [1e-4]          # Learning rate
+LR_GRID = [5e-5]          # Learning rate
 WD_GRID = [1e-4]          # Weight decay
-SIGMA_GRID = [0.3, 0.5, 0.7]    # Gaussian heatmap standard deviation
-K_GRID = [25.0, 35.0, 45.0]     # Positive sample weight for BCE loss
+SIGMA_GRID = [0.7]    # Gaussian heatmap standard deviation
+K_GRID = [35.0]     # Positive sample weight for BCE loss
+BOXWEIGHT_GRID = [5.0, 7.5]    # Weight for bounding box regression loss
+CENTERWEIGHT_GRID = [3.0, 5.0]  # Weight for center point regression loss
 
 #not many parameters, easy to implement
 
@@ -63,8 +65,8 @@ BASE_RUN_DIR.mkdir(parents=True, exist_ok=True)
 hpo_id = 0
 hpo_results = []
 
-for lr, weight_decay, sigma, k in itertools.product(
-        LR_GRID, WD_GRID, SIGMA_GRID, K_GRID):
+for lr, weight_decay, sigma, k, box_weight, center_weight in itertools.product(
+        LR_GRID, WD_GRID, SIGMA_GRID, K_GRID, BOXWEIGHT_GRID, CENTERWEIGHT_GRID):
 
     # Create unique run directory for each HPO run
     hpo_run_name = f"hpo_{hpo_id:04d}"
@@ -89,13 +91,15 @@ for lr, weight_decay, sigma, k in itertools.product(
         "--run_name", hpo_run_name,
     ]
     # Print HPO run details and execute the training command as a subprocess
-    print(f"[{hpo_run_name}] lr={lr} weight_decay={weight_decay} sigma={sigma} k={k}")
+    print(f"[{hpo_run_name}] lr={lr} weight_decay={weight_decay} sigma={sigma} k={k} box_weight={box_weight} center_weight={center_weight}")
     subprocess.run(command, check=True)
 
-    # Read best_acc from checkpoint meta
+    # Read best data from checkpoint meta
     checkpoint = torch.load(best_checkpoint, map_location="cpu")
     meta = checkpoint.get("meta", {})
     best_acc = float(meta.get("best_acc", 0.0))
+    best_center_acc = float(meta.get("best_center_acc", 0.0))
+    best_boxloss = float(meta.get("best_boxloss", 0.0))
 
     # Store HPO results in list
     hpo_results.append({
@@ -104,7 +108,11 @@ for lr, weight_decay, sigma, k in itertools.product(
         "weight_decay": weight_decay,
         "gaussHm_sigma": sigma,
         "BCE_scale": k,
+        "box_weight": box_weight,
+        "center_weight": center_weight,
         "best_acc": best_acc,
+        "best_center_acc": best_center_acc,
+        "best_boxloss": best_boxloss,
     })
 
     # Save parameters and scores to JSON file in run directory

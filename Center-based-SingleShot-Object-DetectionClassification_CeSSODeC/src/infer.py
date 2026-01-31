@@ -41,8 +41,11 @@ import torch
 import torchvision.transforms.functional as TF
 from PIL import Image
 
-from config import GridConfig, ModelConfig
+import numpy as np
+import matplotlib.pyplot as plt
 
+from config import GridConfig, ModelConfig
+from visualizationHelpers import visualize_inference_with_heatmap
 
 @dataclass(frozen=True)
 class InferConfig:
@@ -190,6 +193,7 @@ def run_inference(
         grid_cfg: GridConfig,
         infer_cfg: InferConfig,
         output_dir: Optional[str] = None,
+
 ) -> list[dict[str, Any]]:
     """ 
     Run inference on a list of input images.
@@ -224,7 +228,7 @@ def run_inference(
         with torch.no_grad():
             center_preds, box_preds, class_preds = model(
                 img_tensor)  # Forward pass through the model
-
+        
         decoded = decode_single(
             center_preds=center_preds,
             box_preds=box_preds,
@@ -233,6 +237,21 @@ def run_inference(
         decoded["input_path"] = img_path
         results.append(decoded)
 
-        _ = output_dir
+        if output_dir is not None:
+            out_dir = Path(output_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            save_path = str(out_dir / f"{Path(img_path).stem}_box_class_Hmap.png")
+            visualize_inference_with_heatmap(
+                img_path=img_path,
+                pred=decoded,
+                center_preds=center_preds,
+                stride_S=grid_cfg.stride_S,
+                imgsz=grid_cfg.imgsz,
+                class_names=None,  # Optionally, provide class names here
+                save_path=save_path,
+                overlay_alpha=0.4,
+            )
 
     return results
+

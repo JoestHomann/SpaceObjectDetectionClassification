@@ -60,12 +60,18 @@ class LossConfig:
             Standard deviation for Gaussian heatmap generation.
         BCE_scale: float
             Scaling factor for Binary Cross Entropy loss component.
+        box_weight: float
+            Weight for bounding box regression loss.
+        center_weight: float
+            Weight for center point regression loss.
     """
     gaussHm_sigma: float = 0.5
     BCE_scale: float = 25
+    box_weight: float = 5.0
+    center_weight: float = 3.0
 
 @dataclass(frozen=True)
-class DataConfig:
+class DataConfig:   
     """
     Dataset configuration for CeSSODeC.
     

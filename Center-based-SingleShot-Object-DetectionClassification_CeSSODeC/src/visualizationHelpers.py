@@ -37,8 +37,13 @@ import torch
 import torchvision.utils as vutils
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+
+import math
+
+from pathlib import Path
+
 from torchvision.transforms.functional import resize
-from torchvision.io import read_image, write_jpeg
+from torchvision.io import regead_image, write_jp
 import math
 
 from config import RunConfig
@@ -454,6 +459,137 @@ def visualize_single_inference(
     # Draw center cross on image using helper function
     _draw_cross_uint8_chw(img_u8, int(round(y_center_pred)), int(round(x_center_pred)), cross_radius=6, color=(255, 0, 0))
 
+    # Save or show figure
+    if save_path:
+        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        plt.close(fig)
+    else:
+        plt.show()
+
+def visualize_inference_with_heatmap(
+    img_path: str,
+    pred: dict,
+    center_preds: torch.Tensor,   # (1,1,H,W) logits
+    stride_S: int,
+    imgsz: int,
+    class_names: list[str] | None = None,
+    save_path: str | None = None,
+    overlay_alpha: float = 0.4
+) -> None:
+    """
+    Overlays center heatmap + predicted bbox + class label on the resized input image.
+    """
+    # --- Load image exactly like inference (resize to imgsz x imgsz) ---
+    img = Image.open(img_path).convert("RGB")
+    img = img.resize((imgsz, imgsz))
+
+    # --- Heatmap: sigmoid + upsample to image size ---
+    heatmap = torch.sigmoid(center_preds[0, 0]).detach().cpu()  # (H,W)
+    heatmap_up = F.interpolate(
+        heatmap.unsqueeze(0).unsqueeze(0),   # (1,1,H,W)
+        size=(imgsz, imgsz),
+        mode="bilinear",
+        align_corners=False
+    )[0, 0].numpy()
+
+    # --- Decode bbox like in visualize_single_inference ---
+    i_hat, j_hat = pred["grid_Indices_hat"]
+    i_hat = int(i_hat)
+    j_hat = int(j_hat)
+
+    # 1) Heatmap/Grid center (NO offsets)
+    cx_grid = j_hat * stride_S + stride_S / 2
+    cy_grid = i_hat * stride_S + stride_S / 2
+    
+    xc_norm, yc_norm, w_norm, h_norm = pred["box_hat_list"]
+
+    cx = float(xc_norm) * imgsz
+    cy = float(yc_norm) * imgsz
+    w_px = float(w_norm) * imgsz
+    h_px = float(h_norm) * imgsz
+
+    x1 = cx- w_px / 2
+    y1 = cy - h_px / 2
+
+    # --- Class + combined probability like in your existing code ---
+    cls = int(pred["cls_hat"])
+    score_logit = float(pred["center_score"])
+    center_probability = torch.sigmoid(torch.tensor(score_logit)).item()
+
+    class_logits = np.array(pred["cls_logits_list"], dtype=np.float64)
+    class_logits = class_logits - np.max(class_logits)
+    class_probabilities = np.exp(class_logits) / np.sum(np.exp(class_logits))
+    class_probability = float(class_probabilities[cls])
+    combined_probability = center_probability * class_probability
+
+    if class_names:
+        label = f"{class_names[cls]} | {combined_probability:.3f}"
+    else:
+        label = f"Class {cls} | {combined_probability:.3f}"
+
+    # --- Plot ---
+    fig, ax = plt.subplots(1, figsize=(6, 6))
+    ax.imshow(img)
+    ax.imshow(heatmap_up, cmap="jet", alpha=overlay_alpha)
+    # --- draw full grid (debug) ---
+    H = int(imgsz // stride_S)
+    W = int(imgsz // stride_S)
+
+    for i in range(H + 1):
+        y = i * stride_S
+        ax.plot([0, imgsz], [y, y], color="white", alpha=0.25, linewidth=0.5)
+
+    for j in range(W + 1):
+        x = j * stride_S
+        ax.plot([x, x], [0, imgsz], color="white", alpha=0.25, linewidth=0.5)
+        
+    # CHOSEN grid cell rectangle
+    j_box = int(cx // stride_S)
+    i_box = int(cy // stride_S)
+
+    rect_box = patches.Rectangle(
+        (j_box * stride_S, i_box * stride_S),
+        stride_S, stride_S,
+        linewidth=2,
+        edgecolor="red",
+        facecolor="none",
+        linestyle="--"
+    )
+    ax.add_patch(rect_box)
+
+    # bbox
+    rect = patches.Rectangle(
+        (x1, y1), w_px, h_px,
+        linewidth=2,
+        edgecolor="red",
+        facecolor="none"
+    )
+    ax.add_patch(rect)
+
+    # center point
+    # Heatmap/Grid center (green)
+    ax.plot(cx_grid, cy_grid, "go", markersize=8, label="grid center")
+
+    # Box center (red)
+    ax.plot(cx, cy, "ro", markersize=6, label="box center")
+
+    ax.legend(loc="upper right")
+
+    # label
+    ax.text(
+        x1, y1 - 5, label,
+        color="red", fontsize=10,
+        bbox=dict(facecolor="black", alpha=0.5, pad=2)
+    )
+
+    ax.set_axis_off()
+
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        plt.close(fig)
+    else:
+        plt.show()
     # If no save path is given, print error
     if save_path is None:
         raise ValueError("save_path must be provided when using visualize_single_inference (save-only).")

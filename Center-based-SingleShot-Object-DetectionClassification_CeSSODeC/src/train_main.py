@@ -76,6 +76,8 @@ def parse_args_tr() -> argparse.Namespace:
     parser.add_argument("--gaussHm_sigma", type=float, default=None, help="Change Gaussian heatmap sigma (overrides LossConfig.gaussHm_sigma)")
     parser.add_argument("--BCE_scale", type=float, default=None, help="Change BCE loss scale (overrides LossConfig.BCE_scale)")
     parser.add_argument("--run_name", type=str, default="default", help = "Name of the current run for logging purposes")
+    parser.add_argument("--box_weight", type=float, default=None, help="Change bounding box regression loss weight (overrides LossConfig.box_weight)" )
+    parser.add_argument("--center_weight", type=float, default=None, help="Change center point regression loss weight (overrides LossConfig.center_weight)" )
 
     return parser.parse_args()
 
@@ -118,12 +120,17 @@ def build_config_tr(ParserArguments: argparse.Namespace) -> RunConfig:
     loss = LossConfig()
     
     # Overwrite the instances LossConfig values with the parsed arguments (if parsed) and store them in loss
-    if ParserArguments.gaussHm_sigma is not None or ParserArguments.BCE_scale is not None:
+    if (ParserArguments.gaussHm_sigma is not None or ParserArguments.BCE_scale is not None or
+        ParserArguments.box_weight is not None or ParserArguments.center_weight is not None):
         loss = LossConfig(
             gaussHm_sigma=ParserArguments.gaussHm_sigma 
                 if ParserArguments.gaussHm_sigma is not None else loss.gaussHm_sigma,
             BCE_scale=ParserArguments.BCE_scale 
                 if ParserArguments.BCE_scale is not None else loss.BCE_scale,
+            box_weight=ParserArguments.box_weight
+                if ParserArguments.box_weight is not None else loss.box_weight,
+            center_weight=ParserArguments.center_weight
+                if ParserArguments.center_weight is not None else loss.center_weight,
         )
 
     # Overwrite the instances TrainConfig values with the parsed arguments (if parsed) and store them in train

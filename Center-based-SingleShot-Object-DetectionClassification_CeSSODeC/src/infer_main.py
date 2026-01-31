@@ -75,6 +75,11 @@ def parse_args_inf() -> argparse.Namespace:
     parser.add_argument("--imgsz", type=int, required=False, default=None, help="Input image size in pixels (overrides GridConfig.imgsz)")
     parser.add_argument("--stride_S", type=int, required=False, default=None, help="Feature stride in pixels (overrides GridConfig.stride_S)")
 
+    #heatmap outputs
+    parser.add_argument("--save_heatmap", action='store_true', help="If set, saves the heatmap output from the model for each image.")
+    parser.add_argument("--heatmap_output_dir", type=str, default="infer_runs/heatmaps", help="Directory to save heatmap outputs if --save_heatmap is set.")
+    parser.add_argument("--heatmap_overlay", action = 'store_true', help="If set, saves heatmap overlayed on original image.")
+
     return parser.parse_args()
 
 def build_config_inf(ParserArguments: argparse.Namespace) -> RunConfig:
@@ -179,6 +184,7 @@ def main() -> None:
         model_cfg=config_inf.model,
         grid_cfg=config_inf.grid,
         infer_cfg=infer_cfg,
+        output_dir="infer_runs/overlays",  # No need to save raw outputs here
     )
 
     # Create output directory for inference results if it doesn't exist yet

@@ -42,12 +42,12 @@ import sys
 # Grid definitions for HPO
 # -------------------------------
 
-LR_GRID = [5e-5]          # Learning rate
+LR_GRID = [1e-4]          # Learning rate
 WD_GRID = [1e-4]          # Weight decay
 SIGMA_GRID = [0.7]    # Gaussian heatmap standard deviation
-K_GRID = [35.0]     # Positive sample weight for BCE loss
-BOXWEIGHT_GRID = [5.0, 7.5]    # Weight for bounding box regression loss
-CENTERWEIGHT_GRID = [3.0, 5.0]  # Weight for center point regression loss
+K_GRID = [6, 8, 10]     # Positive sample weight for BCE loss
+BOXWEIGHT_GRID = [3.0, 5.0, 8.0]    # Weight for bounding box regression loss
+CENTERWEIGHT_GRID = [3.0]  # Weight for center point regression loss
 
 #not many parameters, easy to implement
 
@@ -89,6 +89,8 @@ for lr, weight_decay, sigma, k, box_weight, center_weight in itertools.product(
         "--checkpointPath_last", str(last_checkpoint),
         "--checkpointPath_best", str(best_checkpoint),
         "--run_name", hpo_run_name,
+        "--box_weight", str(box_weight),
+        "--center_weight", str(center_weight)
     ]
     # Print HPO run details and execute the training command as a subprocess
     print(f"[{hpo_run_name}] lr={lr} weight_decay={weight_decay} sigma={sigma} k={k} box_weight={box_weight} center_weight={center_weight}")

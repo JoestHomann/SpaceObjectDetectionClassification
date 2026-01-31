@@ -33,6 +33,8 @@
 #from cmath import rect
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import patches
+from PIL import Image
 import torch
 import torchvision.utils as vutils
 from torch.utils.data import DataLoader
@@ -43,7 +45,7 @@ import math
 from pathlib import Path
 
 from torchvision.transforms.functional import resize
-from torchvision.io import regead_image, write_jp
+from torchvision.io import read_image, write_jpeg
 import math
 
 from config import RunConfig
@@ -461,9 +463,12 @@ def visualize_single_inference(
 
     # Save or show figure
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
-        plt.close(fig)
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        write_jpeg(img_u8, save_path, quality=95)
     else:
+        fig, ax = plt.subplots(1, figsize=(6, 6))
+        ax.imshow(img_u8.permute(1, 2, 0).cpu())
+        ax.set_axis_off()
         plt.show()
 
 def visualize_inference_with_heatmap(
@@ -590,11 +595,3 @@ def visualize_inference_with_heatmap(
         plt.close(fig)
     else:
         plt.show()
-    # If no save path is given, print error
-    if save_path is None:
-        raise ValueError("save_path must be provided when using visualize_single_inference (save-only).")
-
-    # Save the image with drawn boxes, crosses, and labels
-    write_jpeg(img_u8, save_path, quality=95)
-
-    return

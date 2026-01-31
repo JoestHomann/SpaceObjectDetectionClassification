@@ -185,8 +185,8 @@ class SingleObjectLoss(nn.Module):
             reduction='none'                                    # Ouput the mean loss over the batch
         )
 
-        alpha = 1.0  # Weighting factor for positive samples (TODO: Make this a tuneable hyperparameter)
-        beta = 0.2  # Weighting factor for negative samples (TODO: Make this a tuneable hyperparameter)
+        alpha = k  # Weighting factor for positive samples (TODO: Make this a tuneable hyperparameter)
+        beta = 1.0  # Weighting factor for negative samples (TODO: Make this a tuneable hyperparameter)
         weight = alpha * center_target + beta * (1.0 - center_target)       # Weight map for balancing positive and negative samples
         Loss_center = (Loss_center_map * weight).sum() / (weight.sum()+1e-6)  # Weighted center loss
 

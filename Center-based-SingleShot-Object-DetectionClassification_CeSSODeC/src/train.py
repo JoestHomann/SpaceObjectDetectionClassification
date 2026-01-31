@@ -187,8 +187,6 @@ def train_one_epoch(
                 cls_gt=cls_gt,
                 gaussHm_sigma=cfg.loss.gaussHm_sigma,
                 BCE_scale=cfg.loss.BCE_scale,
-                box_weight=cfg.loss.box_weight,
-                center_weight=cfg.loss.center_weight,
             )
 
         # Accuracy calculation (for logging)
@@ -322,8 +320,6 @@ def validate(
             cls_gt=cls_gt,
             gaussHm_sigma=cfg.loss.gaussHm_sigma,
             BCE_scale=cfg.loss.BCE_scale,
-            box_weight=cfg.loss.box_weight,
-            center_weight=cfg.loss.center_weight,
         )
 
         # Accumulate losses 
@@ -419,7 +415,10 @@ def fit(cfg: RunConfig) -> None:
 
     # Initialize model, loss function, optimizer
     model = CeSSODeCModel(cfg.model, cfg.grid).to(device)
-    loss_fn = SingleObjectLoss()
+    loss_fn = SingleObjectLoss(
+        box_weight=cfg.loss.box_weight,
+        center_weight=cfg.loss.center_weight,
+    )
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=cfg.train.lr,
